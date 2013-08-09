@@ -1,6 +1,13 @@
+# coding=utf-8
+"""Earthdquake Building Impact Function"""
 from third_party.odict import OrderedDict
 from safe.impact_functions.core import (
-    FunctionProvider, get_hazard_layer, get_exposure_layer, get_question)
+    FunctionProvider,
+    get_hazard_layer,
+    get_exposure_layer,
+    get_question,
+    building_usage,
+    building_breakdown)
 from safe.storage.vector import Vector
 from safe.common.utilities import (ugettext as tr, format_int)
 from safe.common.tables import Table, TableRow
@@ -35,6 +42,12 @@ class EarthquakeBuildingImpactFunction(FunctionProvider):
 
     def run(self, layers):
         """Earthquake impact to buildings (e.g. from Open Street Map)
+
+        :param layers: list of layers
+        :type: list
+
+        :returns: The impact vector layer.
+        :rtype: Vector
         """
 
         LOGGER.debug('Running earthquake building impact')
@@ -88,9 +101,13 @@ class EarthquakeBuildingImpactFunction(FunctionProvider):
         hi = 0
         building_values = {}
         contents_values = {}
+        buildings = {}
+        affected_buildings = {}
         for key in range(4):
             building_values[key] = 0
             contents_values[key] = 0
+            buildings = {}
+            affected_buildings[key] = {}
         for i in range(N):
             # Classify building according to shake level
             # and calculate dollar losses
@@ -134,6 +151,18 @@ class EarthquakeBuildingImpactFunction(FunctionProvider):
                 # Not reported for less than level t0
                 cls = 0
 
+            key = building_usage(attribute_names, attributes[i])
+
+            if key not in buildings:
+                buildings[key] = 0
+                affected_buildings[cls][key] = 0
+
+            # Count all buildings by type
+            buildings[key] += 1
+            if cls:
+                # Count affected buildings by type and group by class
+                affected_buildings[cls][key] += 1
+
             attributes[i][self.target_field] = cls
 
             if is_NEXIS:
@@ -173,6 +202,33 @@ class EarthquakeBuildingImpactFunction(FunctionProvider):
                           TableRow([class_1, format_int(lo)]),
                           TableRow([class_2, format_int(me)]),
                           TableRow([class_3, format_int(hi)])]
+
+            building_table_data = []
+            for cls, class_name in [(1, class_1), (2, class_2), (3, class_3)]:
+                # if len(affected_buildings.keys()) <= 1:
+                #     # It is pointless to give a breakdown unless we have at
+                #     # least two listing types
+                #     continue
+                building_summary = building_breakdown(
+                    affected_buildings[cls], buildings)
+                building_table_data.append(
+                    building_summary["affected_buildings_breakdown"])
+
+            table_body.append(TableRow(
+                tr('Breakdown by building type for hazard'),
+                header=True))
+            table_body.append(TableRow(
+                [class_1, class_2, class_3],
+                header=True))
+            for building_type in building_summary['building_types']:
+                row = []
+                for btd in building_table_data:
+                    if building_type in building_table_data:
+                        row.append(format_int(btd[building_type]))
+                    else:
+                        row.append(0)
+                print row
+                table_body.append(TableRow([type] + row))
 
         table_body.append(TableRow(tr('Notes'), header=True))
         table_body.append(tr('High hazard is defined as shake levels greater '

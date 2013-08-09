@@ -123,6 +123,105 @@ def evacuated_population_weekly_needs(population, minimum_needs=False):
     return weekly_needs
 
 
+def building_usage(attribute_names, attributes):
+    """Get the building usage based attribute
+    :param attribute_names: Valid attribute names
+    :param attributes: The attributes
+    :type attributes: dict
+
+    :return:
+    """
+    if 'type' in attribute_names:
+        usage = attributes['type']
+    elif 'TYPE' in attribute_names:
+        usage = attributes['TYPE']
+    else:
+        usage = None
+    if 'amenity' in attribute_names and (usage is None or usage == 0):
+        usage = attributes['amenity']
+    if 'building_t' in attribute_names and (usage is None
+                                            or usage == 0):
+        usage = attributes['building_t']
+    if 'office' in attribute_names and (usage is None or usage == 0):
+        usage = attributes['office']
+    if 'tourism' in attribute_names and (usage is None or usage == 0):
+        usage = attributes['tourism']
+    if 'leisure' in attribute_names and (usage is None or usage == 0):
+        usage = attributes['leisure']
+    if 'building' in attribute_names and (usage is None or usage == 0):
+        usage = attributes['building']
+        if usage == 'yes':
+            usage = 'building'
+    if usage is not None and usage != 0:
+        key = usage
+    else:
+        key = 'unknown'
+    return key
+
+
+def building_breakdown(affected_buildings, buildings):
+    """Calculate the building breakdown
+
+    :param affected_buildings:
+
+    :param buildings:
+
+    :returns: A breakdown of the affected buildings
+    :rtype: dict
+    """
+    # Lump small entries and 'unknown' into 'other' category
+    for usage in buildings.keys():
+        x = buildings[usage]
+        if (x < 25 or usage == 'unknown') and usage != 'other':
+            if 'other' not in affected_buildings:
+                affected_buildings['other'] = 0
+            if 'other' not in buildings:
+                buildings['other'] = 0
+
+            buildings['other'] += x
+            del buildings[usage]
+            if usage in affected_buildings:
+                affected_buildings['other'] += affected_buildings[usage]
+                del affected_buildings[usage]
+
+    for usage in affected_buildings.keys():
+        if usage not in buildings.keys():
+            if 'other' not in affected_buildings:
+                affected_buildings['other'] = 0
+
+            affected_buildings['other'] += affected_buildings[usage]
+
+    affected_buildings_breakdown = {}
+    total_buildings_breakdown = {}
+    hospital_closed = 0
+    school_closed = 0
+    for usage in buildings:
+        if usage not in affected_buildings:
+            affected_buildings[usage] = 0
+        building_type = usage.replace('_', ' ')
+
+        # Lookup internationalised value if available
+        building_type = tr(building_type)
+        key = building_type.capitalize()
+        affected_buildings_breakdown[key] = affected_buildings[usage]
+        total_buildings_breakdown[key] = buildings[usage]
+        if building_type == 'school':
+            school_closed = affected_buildings[usage]
+        if building_type == 'hospital':
+            hospital_closed = affected_buildings[usage]
+
+    # Sort alphabetically
+
+    building_types = buildings.keys()
+    building_types.sort()
+    return {
+        'affected_buildings_breakdown': affected_buildings_breakdown,
+        'total_buildings_breakdown': total_buildings_breakdown,
+        'hospital_closed': hospital_closed,
+        'school_closed': school_closed,
+        'building_types': building_types}
+
+
 def get_function_title(func):
     """Get title for impact function
 

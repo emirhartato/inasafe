@@ -24,13 +24,14 @@
 """
 
 import os
+
 from safe.impact_functions.core import FunctionProvider
 from safe.impact_functions.core import get_hazard_layer, get_exposure_layer
 from safe.storage.vector import Vector
 from safe.common.numerics import log_normal_cdf
 from safe.common.utilities import ugettext as tr
-from safe.common.utilities import verify
 from safe.engine.interpolation import assign_hazard_values_to_exposure_data
+from safe.common.exceptions import VerificationError
 
 path = os.path.dirname(__file__)
 
@@ -133,11 +134,14 @@ class ITBEarthquakeBuildingDamageFunction(FunctionProvider):
             beta = damage_params['beta']
             median = damage_params['median']
 
-            msg = 'Invalid parameter value for ' + building_type
-            verify(beta + median > 0.0, msg)
-            percent_damage = log_normal_cdf(mmi,
-                                           median=median,
-                                           sigma=beta) * 100
+            if beta + median > 0.0:
+                # Converted verify to if to prevent repeated instantiation msg
+                msg = 'Invalid parameter value for ' + building_type
+                VerificationError(msg)
+            percent_damage = log_normal_cdf(
+                mmi,
+                median=median,
+                sigma=beta) * 100
 
             # Collect shake level and calculated damage
             result_dict = {self.target_field: percent_damage,
