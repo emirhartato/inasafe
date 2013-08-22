@@ -6,8 +6,7 @@ from safe.impact_functions.core import (
     get_hazard_layer,
     get_exposure_layer,
     get_question,
-    building_usage,
-    building_breakdown)
+    AffectedBuildings)
 from safe.storage.vector import Vector
 from safe.common.utilities import (ugettext as tr, format_int)
 from safe.common.tables import Table, TableRow
@@ -37,7 +36,8 @@ class EarthquakeBuildingImpactFunction(FunctionProvider):
                               ('medium_threshold', 7),
                               ('high_threshold', 8),
                               ('postprocessors', OrderedDict([
-                              ('AggregationCategorical', {'on': False})]))
+                              ('AggregationCategorical', {'on': False})])),
+                              ('reduce_building_types', 25)
                               ])
 
     def run(self, layers):
@@ -60,6 +60,7 @@ class EarthquakeBuildingImpactFunction(FunctionProvider):
         t0 = self.parameters['low_threshold']
         t1 = self.parameters['medium_threshold']
         t2 = self.parameters['high_threshold']
+        reduce_building_types = self.parameters['reduce_building_types']
 
         class_1 = tr('Low')
         class_2 = tr('Medium')
@@ -101,13 +102,11 @@ class EarthquakeBuildingImpactFunction(FunctionProvider):
         hi = 0
         building_values = {}
         contents_values = {}
-        buildings = {}
-        affected_buildings = {}
+        affected_buildings = AffectedBuildings([class_1, class_2, class_3])
+        affected_buildings.set_attribute_names(attribute_names)
         for key in range(4):
             building_values[key] = 0
             contents_values[key] = 0
-            buildings = {}
-            affected_buildings[key] = {}
         for i in range(N):
             # Classify building according to shake level
             # and calculate dollar losses
@@ -138,6 +137,8 @@ class EarthquakeBuildingImpactFunction(FunctionProvider):
                 x = float(attributes[i][hazard_attribute])  # MMI
             except TypeError:
                 x = 0.0
+
+            building_affected = True
             if t0 <= x < t1:
                 lo += 1
                 cls = 1
@@ -150,19 +151,11 @@ class EarthquakeBuildingImpactFunction(FunctionProvider):
             else:
                 # Not reported for less than level t0
                 cls = 0
+                building_affected = False
 
-            key = building_usage(attribute_names, attributes[i])
-
-            if key not in buildings:
-                buildings[key] = 0
-                affected_buildings[cls][key] = 0
-
-            # Count all buildings by type
-            buildings[key] += 1
-            if cls:
-                # Count affected buildings by type and group by class
-                affected_buildings[cls][key] += 1
-
+            zone = [None, class_1, class_2, class_3][cls]
+            affected_buildings.classify_building(
+                attributes[i], zone=zone, affected=building_affected)
             attributes[i][self.target_field] = cls
 
             if is_NEXIS:
@@ -195,40 +188,18 @@ class EarthquakeBuildingImpactFunction(FunctionProvider):
                                     format_int(contents_values[3])])]
         else:
             # Generate simple impact report for unspecific buildings
-            table_body = [question,
-                          TableRow([tr('Hazard Level'),
-                                    tr('Buildings Affected')],
-                          header=True),
-                          TableRow([class_1, format_int(lo)]),
-                          TableRow([class_2, format_int(me)]),
-                          TableRow([class_3, format_int(hi)])]
+            table_body = [
+                question, TableRow(
+                    [tr('Hazard Level'), tr('Buildings Affected')],
+                    header=True),
+                TableRow([class_1, format_int(lo)]),
+                TableRow([class_2, format_int(me)]),
+                TableRow([class_3, format_int(hi)])]
+            table_body.append('')
 
-            building_table_data = []
-            for cls, class_name in [(1, class_1), (2, class_2), (3, class_3)]:
-                # if len(affected_buildings.keys()) <= 1:
-                #     # It is pointless to give a breakdown unless we have at
-                #     # least two listing types
-                #     continue
-                building_summary = building_breakdown(
-                    affected_buildings[cls], buildings)
-                building_table_data.append(
-                    building_summary["affected_buildings_breakdown"])
-
-            table_body.append(TableRow(
-                tr('Breakdown by building type for hazard'),
-                header=True))
-            table_body.append(TableRow(
-                [class_1, class_2, class_3],
-                header=True))
-            for building_type in building_summary['building_types']:
-                row = []
-                for btd in building_table_data:
-                    if building_type in building_table_data:
-                        row.append(format_int(btd[building_type]))
-                    else:
-                        row.append(0)
-                print row
-                table_body.append(TableRow([type] + row))
+        table_body += affected_buildings.get_table_summary(
+            zones=[class_1, class_2, class_3],
+            reduce_threshold=reduce_building_types)
 
         table_body.append(TableRow(tr('Notes'), header=True))
         table_body.append(tr('High hazard is defined as shake levels greater '

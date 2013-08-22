@@ -16,6 +16,7 @@ from third_party.odict import OrderedDict
 import keyword as python_keywords
 from safe.common.polygon import inside_polygon
 from safe.common.utilities import ugettext as tr
+from safe.common.utilities import format_int
 from safe.common.tables import Table, TableCell, TableRow
 from utilities import pretty_string, remove_double_spaces
 
@@ -123,103 +124,276 @@ def evacuated_population_weekly_needs(population, minimum_needs=False):
     return weekly_needs
 
 
-def building_usage(attribute_names, attributes):
-    """Get the building usage based attribute
-    :param attribute_names: Valid attribute names
-    :param attributes: The attributes
-    :type attributes: dict
-
-    :return:
+class AffectedBuildings(object):
+    """Calculate the affected and give a breakdown of them.
     """
-    if 'type' in attribute_names:
-        usage = attributes['type']
-    elif 'TYPE' in attribute_names:
-        usage = attributes['TYPE']
-    else:
-        usage = None
-    if 'amenity' in attribute_names and (usage is None or usage == 0):
-        usage = attributes['amenity']
-    if 'building_t' in attribute_names and (usage is None
-                                            or usage == 0):
-        usage = attributes['building_t']
-    if 'office' in attribute_names and (usage is None or usage == 0):
-        usage = attributes['office']
-    if 'tourism' in attribute_names and (usage is None or usage == 0):
-        usage = attributes['tourism']
-    if 'leisure' in attribute_names and (usage is None or usage == 0):
-        usage = attributes['leisure']
-    if 'building' in attribute_names and (usage is None or usage == 0):
-        usage = attributes['building']
-        if usage == 'yes':
-            usage = 'building'
-    if usage is not None and usage != 0:
-        key = usage
-    else:
-        key = 'unknown'
-    return key
+    def __init__(self, zones):
+        if type(zones) != list:
+            zones = [zones]
+        self.zones = zones
+        self.zones.append(None)
+        self.buildings_summary = {}
+        for zone in self.zones:
+            self.buildings_summary[zone] = {}
+        self.attribute_names = None
+        self.buildings = []
 
+    @staticmethod
+    def usage_to_building_type(usage):
+        """Convert usage to the proper internationalised building type.
 
-def building_breakdown(affected_buildings, buildings):
-    """Calculate the building breakdown
+        :param usage: Usage key
+        :type usage: str
 
-    :param affected_buildings:
-
-    :param buildings:
-
-    :returns: A breakdown of the affected buildings
-    :rtype: dict
-    """
-    # Lump small entries and 'unknown' into 'other' category
-    for usage in buildings.keys():
-        x = buildings[usage]
-        if (x < 25 or usage == 'unknown') and usage != 'other':
-            if 'other' not in affected_buildings:
-                affected_buildings['other'] = 0
-            if 'other' not in buildings:
-                buildings['other'] = 0
-
-            buildings['other'] += x
-            del buildings[usage]
-            if usage in affected_buildings:
-                affected_buildings['other'] += affected_buildings[usage]
-                del affected_buildings[usage]
-
-    for usage in affected_buildings.keys():
-        if usage not in buildings.keys():
-            if 'other' not in affected_buildings:
-                affected_buildings['other'] = 0
-
-            affected_buildings['other'] += affected_buildings[usage]
-
-    affected_buildings_breakdown = {}
-    total_buildings_breakdown = {}
-    hospital_closed = 0
-    school_closed = 0
-    for usage in buildings:
-        if usage not in affected_buildings:
-            affected_buildings[usage] = 0
+        :return: Internationalized building type name
+        :rtype: str
+        """
         building_type = usage.replace('_', ' ')
-
         # Lookup internationalised value if available
-        building_type = tr(building_type)
-        key = building_type.capitalize()
-        affected_buildings_breakdown[key] = affected_buildings[usage]
-        total_buildings_breakdown[key] = buildings[usage]
-        if building_type == 'school':
-            school_closed = affected_buildings[usage]
-        if building_type == 'hospital':
-            hospital_closed = affected_buildings[usage]
+        building_type = tr(building_type).capitalize()
+        return building_type
 
-    # Sort alphabetically
+    def total_affected_building_type(self,  building_type):
+        """The total number of affected buildings of type
 
-    building_types = buildings.keys()
-    building_types.sort()
-    return {
-        'affected_buildings_breakdown': affected_buildings_breakdown,
-        'total_buildings_breakdown': total_buildings_breakdown,
-        'hospital_closed': hospital_closed,
-        'school_closed': school_closed,
-        'building_types': building_types}
+        :param building_type: The building type in question.
+        :type building_type: str
+
+        :returns: total number of affected buildings
+        :rtype: int
+        """
+        if building_type not in self.buildings:
+            return 0
+        return sum(
+            [summary[building_type]['affected'] for summary in
+                self.buildings_summary.values()])
+
+    def total_building_type(self, building_type):
+        """The total number of a given building type
+
+        :param building_type: The building type in question.
+        :type building_type: str
+
+        :return: Total number of buildings.
+        :rtype: int
+        """
+        return sum(
+            [sum(summary[building_type].values()) for summary in
+                self.buildings_summary.values()])
+
+    def set_attribute_names(self, attribute_names):
+        """Attribute name setter method.
+        :param attribute_names: The list of attribute names used in building
+            descriptions.
+        :type attribute_names: list
+        """
+        self.attribute_names = attribute_names
+
+    def classify_building(self, attributes, zone=None, affected=True):
+        """Classify the specific building by type, zone and whether affected.
+
+        :param attributes: The attributes
+        :type attributes: dict
+
+        :param zone: The zone under which this building falls
+        :type zone: str, None
+
+        :param affected: Whether or not this building has been affected.
+        :type affected: bool
+        """
+        usage = self.building_usage(attributes)
+        building_type = self.usage_to_building_type(usage)
+        if building_type not in self.buildings:
+            for summary in self.buildings_summary.values():
+                summary[building_type] = {
+                    'affected': 0,
+                    'unaffected': 0}
+            self.buildings.append(building_type)
+
+        if affected:
+            self.buildings_summary[zone][building_type]['affected'] += 1
+        else:
+            self.buildings_summary[zone][building_type]['unaffected'] += 1
+
+    def building_usage(self, attributes):
+        """Get the building usage based attribute
+        :param attributes: The attributes
+        :type attributes: dict
+
+        :return: building usage
+        :rtype: str
+        """
+        attribute_names = self.attribute_names
+        if 'type' in attribute_names:
+            usage = attributes['type']
+        elif 'TYPE' in attribute_names:
+            usage = attributes['TYPE']
+        else:
+            usage = None
+        if usage is None or usage == 0:
+            if 'amenity' in attribute_names:
+                usage = attributes['amenity']
+            if 'building_t' in attribute_names:
+                usage = attributes['building_t']
+            if 'office' in attribute_names:
+                usage = attributes['office']
+            if 'tourism' in attribute_names:
+                usage = attributes['tourism']
+            if 'leisure' in attribute_names:
+                usage = attributes['leisure']
+            if 'building' in attribute_names:
+                usage = attributes['building']
+                if usage == 'yes':
+                    usage = 'building'
+        if usage is not None and usage != 0:
+            return usage
+        return'unknown'
+
+    def building_breakdown(self):
+        """Calculate the building breakdown.
+
+        :returns: A breakdown of the affected buildings
+        :rtype: dict
+        """
+        affected_buildings_summary = {}
+        buildings_total = {}
+        hospitals_closed = self.total_affected_building_type(
+            tr('hospital').capitalize())
+        schools_closed = self.total_affected_building_type(
+            tr('school').capitalize())
+        for building_types in self.buildings:
+            affected_buildings_summary[building_types] = (
+                self.total_affected_building_type(building_types))
+            buildings_total[building_types] = (
+                self.total_building_type(building_types))
+
+        building_types = self.buildings[:]
+        building_types.sort()
+        return {
+            'affected_buildings_breakdown': affected_buildings_summary,
+            'zone_buildings_breakdown': self.buildings_summary.copy(),
+            'total_buildings_breakdown': buildings_total,
+            'hospitals_closed': hospitals_closed,
+            'schools_closed': schools_closed,
+            'building_types': building_types}
+
+    def building_breakdown_reduced(self, reduce_threshold):
+        """Building_breakdown with reduction of small types into other
+        :param reduce_threshold: The threshold which is used to reduce
+            building types with small number of affected buildings.
+        :type reduce_threshold: int
+
+        :returns A breakdown of the affected buildings
+        :rtype: dict
+        """
+        buildings_breakdown = self.building_breakdown()
+        building_types = buildings_breakdown['building_types']
+        affected_buildings = buildings_breakdown[
+            'affected_buildings_breakdown']
+        buildings_total = buildings_breakdown[
+            'total_buildings_breakdown']
+        buildings_summary = buildings_breakdown[
+            'zone_buildings_breakdown']
+        other = tr('other').title()
+        if other in building_types:
+            other_exists = True
+        else:
+            other_exists = False
+        # We need to make a copy of the building_types, since we will be
+        # editing the list in the loop
+        building_types_copy = [b for b in building_types]
+        for building_type in building_types_copy:
+            if building_type == tr('other').title():
+                continue
+            if affected_buildings[building_type] < reduce_threshold or building_type == tr(
+                    'unknown').title():
+                if not other_exists:
+                    affected_buildings[other] = 0
+                    buildings_total[other] = 0
+                    for summary in buildings_summary.values():
+                        summary[other] = other
+                    other_exists = True
+                for summary in (buildings_summary.values() + [
+                        affected_buildings, buildings_total]):
+                    summary[other] = summary[building_type]
+                    del summary[building_type]
+                building_types.pop(building_types.index(building_type))
+        return {
+            'affected_buildings_breakdown': affected_buildings,
+            'zone_buildings_breakdown': buildings_summary,
+            'total_buildings_breakdown': buildings_total,
+            'hospitals_closed': buildings_breakdown['hospitals_closed'],
+            'schools_closed': buildings_breakdown['schools_closed'],
+            'building_types': building_types}
+
+    def get_table_summary(self, zones=[], show_affected_summary=True,
+                          show_totals=True, reduce_threshold=25):
+        """Reformat results into a table.
+
+        :param zones:
+        :param show_affected_summary:
+        :param show_totals:
+        :param reduce_threshold:
+        """
+        if reduce_threshold:
+            buildings_breakdown = self.building_breakdown_reduced(
+                reduce_threshold)
+        else:
+            buildings_breakdown = self.building_breakdown()
+        affected_buildings = buildings_breakdown[
+            'affected_buildings_breakdown']
+        buildings_total = buildings_breakdown[
+            'total_buildings_breakdown']
+        buildings_summary = buildings_breakdown['zone_buildings_breakdown']
+        schools_closed = buildings_breakdown['schools_closed']
+        hospitals_closed = buildings_breakdown['hospitals_closed']
+        table_body = [TableRow(
+            tr('Breakdown by building type'),
+            header=True)]
+        heading = [''] + zones
+        if show_affected_summary:
+            heading.append(tr('Affected'))
+        if show_totals:
+            heading.append(tr('Total'))
+        table_body.append(TableRow(heading, header=True))
+
+        for building_type in buildings_breakdown['building_types']:
+            row = []
+            for zone in zones:
+                row.append(buildings_summary[zone][building_type]['affected'])
+            if show_affected_summary:
+                row.append(affected_buildings[building_type])
+            if show_totals:
+                row.append(buildings_total[building_type])
+
+            row = [format_int(item) for item in row]
+            table_body.append(TableRow([building_type] + row))
+
+        table_body.append(TableRow(tr('Action Checklist:'), header=True))
+        table_body.append(TableRow(
+            tr('Are the critical facilities still open?')))
+        table_body.append(TableRow(
+            tr('Which structures have warning capacity (eg. sirens, speakers, '
+               'etc.)?')))
+        table_body.append(TableRow(
+            tr('Which buildings will be evacuation centres?')))
+        table_body.append(TableRow(
+            tr('Where will we locate the operations centre?')))
+        table_body.append(TableRow(
+            tr('Where will we locate warehouse and/or distribution centres?')))
+
+        if schools_closed > 0:
+            table_body.append(TableRow(
+                tr('Where will the students from the %s closed schools go to '
+                   'study?') % format_int(schools_closed)))
+
+        if hospitals_closed > 0:
+            table_body.append(TableRow(
+                tr('Where will the patients from the %s closed hospitals go '
+                   'for treatment and how will we transport them?') %
+                format_int(hospitals_closed)))
+
+        return table_body
 
 
 def get_function_title(func):

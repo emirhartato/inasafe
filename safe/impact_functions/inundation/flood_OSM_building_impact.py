@@ -7,8 +7,7 @@ from safe.impact_functions.core import (FunctionProvider,
                                         get_hazard_layer,
                                         get_exposure_layer,
                                         get_question,
-                                        building_breakdown,
-                                        building_usage)
+                                        AffectedBuildings)
 from safe.storage.vector import Vector
 from safe.storage.utilities import DEFAULT_ATTRIBUTE
 from safe.common.utilities import (ugettext as tr, format_int, verify)
@@ -76,7 +75,9 @@ class FloodBuildingImpactFunction(FunctionProvider):
     # parameters
     parameters = OrderedDict([
         ('threshold [m]', 1.0),
-        ('postprocessors', OrderedDict([('BuildingType', {'on': True})]))])
+        ('postprocessors', OrderedDict([('BuildingType', {'on': True})])),
+        ('reduce_building_types', 25)
+    ])
 
     def run(self, layers):
         """Flood impact to buildings (e.g. from Open Street Map).
@@ -89,6 +90,7 @@ class FloodBuildingImpactFunction(FunctionProvider):
         """
 
         threshold = self.parameters['threshold [m]']  # Flood threshold [m]
+        reduce_building_types = self.parameters['reduce_building_types']
 
         verify(isinstance(threshold, float),
                'Expected thresholds to be a float. Got %s' % str(threshold))
@@ -118,7 +120,9 @@ class FloodBuildingImpactFunction(FunctionProvider):
         # Calculate building impact
         count = 0
         buildings = {}
-        affected_buildings = {}
+        flooded = tr('Flooded')
+        affected_buildings = AffectedBuildings([flooded])
+        affected_buildings.set_attribute_names(attribute_names)
         for i in range(N):
             if mode == 'grid':
                 # Get the interpolated depth
@@ -171,17 +175,9 @@ class FloodBuildingImpactFunction(FunctionProvider):
                 raise Exception(msg)
 
             # Count affected buildings by usage type if available
-            key = building_usage(attribute_names, attributes[i])
-
-            if key not in buildings:
-                buildings[key] = 0
-                affected_buildings[key] = 0
-
-            # Count all buildings by type
-            buildings[key] += 1
+            affected_buildings.classify_building(
+                attributes[i], zone=flooded, affected=x)
             if x is True:
-                # Count affected buildings by type
-                affected_buildings[key] += 1
 
                 # Count total affected buildings
                 count += 1
@@ -200,43 +196,9 @@ class FloodBuildingImpactFunction(FunctionProvider):
         list_type_attribute = [
             'TYPE', 'type', 'amenity', 'building_t', 'office',
             'tourism', 'leisure', 'building']
-        intersect_type = set(attribute_names) & set(list_type_attribute)
-        if len(intersect_type) > 0:
-            building_summary = building_breakdown(
-                affected_buildings, buildings)
-
-            table_body.append(TableRow(tr('Breakdown by building type'),
-                                       header=True))
-            for row in building_summary['building_list']:
-                s = TableRow(row)
-                table_body.append(s)
-        else:
-            building_summary = {
-                'hospital_closed': 0, 'school_closed': 0}
-
-        table_body.append(TableRow(tr('Action Checklist:'), header=True))
-        table_body.append(TableRow(
-            tr('Are the critical facilities still open?')))
-        table_body.append(TableRow(
-            tr('Which structures have warning capacity (eg. sirens, speakers, '
-               'etc.)?')))
-        table_body.append(TableRow(
-            tr('Which buildings will be evacuation centres?')))
-        table_body.append(TableRow(
-            tr('Where will we locate the operations centre?')))
-        table_body.append(TableRow(
-            tr('Where will we locate warehouse and/or distribution centres?')))
-
-        if building_summary['school_closed'] > 0:
-            table_body.append(TableRow(
-                tr('Where will the students from the %s closed schools go to '
-                   'study?') % format_int(building_summary['school_closed'])))
-
-        if building_summary['hospital_closed'] > 0:
-            table_body.append(TableRow(
-                tr('Where will the patients from the %s closed hospitals go '
-                   'for treatment and how will we transport them?') %
-                format_int(building_summary['hospital_closed'])))
+        table_body += affected_buildings.get_table_summary(
+            zones=[flooded], show_affected_summary=False,
+            reduce_threshold=reduce_building_types)
 
         table_body.append(TableRow(tr('Notes'), header=True))
         assumption = tr('Buildings are said to be flooded when ')
