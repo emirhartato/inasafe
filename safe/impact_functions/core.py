@@ -205,9 +205,7 @@ class AffectedBuildings(object):
         building_type = self.usage_to_building_type(usage)
         if building_type not in self.buildings:
             for summary in self.buildings_summary.values():
-                summary[building_type] = {
-                    'affected': 0,
-                    'unaffected': 0}
+                summary[building_type] = {'affected': 0, 'unaffected': 0}
             self.buildings.append(building_type)
 
         if affected:
@@ -305,17 +303,24 @@ class AffectedBuildings(object):
         for building_type in building_types_copy:
             if building_type == tr('other').title():
                 continue
-            if affected_buildings[building_type] < reduce_threshold or building_type == tr(
-                    'unknown').title():
+            if affected_buildings[building_type] < reduce_threshold or (
+                    building_type == tr('unknown').title()):
                 if not other_exists:
                     affected_buildings[other] = 0
                     buildings_total[other] = 0
                     for summary in buildings_summary.values():
-                        summary[other] = other
+                        summary[other] = {'affected': 0, 'unaffected': 0}
                     other_exists = True
-                for summary in (buildings_summary.values() + [
-                        affected_buildings, buildings_total]):
-                    summary[other] = summary[building_type]
+
+                affected_buildings[other] += affected_buildings[building_type]
+                del affected_buildings[building_type]
+                buildings_total[other] += buildings_total[building_type]
+                del buildings_total[building_type]
+                for summary in buildings_summary.values():
+                    summary[other]['affected'] += summary[building_type][
+                        'affected']
+                    summary[other]['unaffected'] += summary[building_type][
+                        'unaffected']
                     del summary[building_type]
                 building_types.pop(building_types.index(building_type))
         return {
@@ -326,14 +331,26 @@ class AffectedBuildings(object):
             'schools_closed': buildings_breakdown['schools_closed'],
             'building_types': building_types}
 
-    def get_table_summary(self, zones=[], show_affected_summary=True,
+    def get_table_summary(self, zones, show_affected_summary=True,
                           show_totals=True, reduce_threshold=25):
         """Reformat results into a table.
 
-        :param zones:
-        :param show_affected_summary:
-        :param show_totals:
-        :param reduce_threshold:
+        :param zones: The zones in which affected buildings fall.
+        :type zones: list
+
+        :param show_affected_summary: Show the summary column (this only
+            makes sense if there are multiple zones).
+        :type show_affected_summary: bool
+
+        :param show_totals: Show the totals column.
+        :type show_totals: bool
+
+        :param reduce_threshold: The number below which buildings need to be
+        grouped into the other category.
+        :type reduce_threshold: int
+
+        :returns: The formatted output of the summary table.
+        :rtype: list
         """
         if reduce_threshold:
             buildings_breakdown = self.building_breakdown_reduced(
