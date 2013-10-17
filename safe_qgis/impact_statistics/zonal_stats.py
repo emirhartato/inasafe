@@ -11,6 +11,7 @@ Contact : ole.moller.nielsen@gmail.com
      (at your option) any later version.
 
 """
+import time
 
 __author__ = 'tim@linfiniti.com'
 __date__ = '17/10/2013'
@@ -91,6 +92,8 @@ def calculate_zonal_stats(raster_layer, polygon_layer):
         layers are in the same CRS - we assume they are.
 
     """
+    print "start with zonal stat"
+    print time.ctime()
     if not is_polygon_layer(polygon_layer):
         raise InvalidParameterError(tr(
             'Zonal stats needs a polygon layer in order to compute '
@@ -205,6 +208,8 @@ def calculate_zonal_stats(raster_layer, polygon_layer):
 
     # noinspection PyUnusedLocal
     myFid = None  # Close
+    print "done with zonal stat"
+    print time.ctime()
     return myResults
 
 

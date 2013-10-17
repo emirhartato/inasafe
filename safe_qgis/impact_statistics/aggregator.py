@@ -229,6 +229,9 @@ class Aggregator(QtCore.QObject):
 
         """
 
+        print "start deintersect time:"
+        print time.ctime()
+
         if not self.is_valid:
             raise InvalidAggregatorError
 
@@ -272,7 +275,8 @@ class Aggregator(QtCore.QObject):
 
         :raises: ReadLayerError
         """
-
+        print "start aggregate time:"
+        print time.ctime()
         if not self.is_valid:
             raise InvalidAggregatorError
 
@@ -338,7 +342,8 @@ class Aggregator(QtCore.QObject):
                     qgis_impact_layer.name(), qgis_impact_layer.type())
             # noinspection PyExceptionInherit
             raise ReadLayerError(message)
-
+        print "done called aggregator"
+        print time.ctime()
         # show a styled aggregation layer
         if self.show_intermediate_layers:
             if self.statistics_type == 'sum':
@@ -390,6 +395,8 @@ class Aggregator(QtCore.QObject):
                 renderer = QgsSingleSymbolRendererV2(symbol)
                 self.layer.setRendererV2(renderer)
                 self.layer.saveDefaultStyle()
+        print "done aggregate"
+        print time.ctime()
 
     def _aggregrate_vector_impact(self, impact_layer, safe_impact_layer):
         """Performs Aggregation postprocessing step on vector impact layers.

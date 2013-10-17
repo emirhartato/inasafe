@@ -9,6 +9,7 @@ Contact : ole.moller.nielsen@gmail.com
      the Free Software Foundation; either version 2 of the License, or
      (at your option) any later version.
 """
+import time
 
 __author__ = 'marco@opengis.ch'
 __revision__ = '$Format:%H$'
@@ -100,9 +101,12 @@ class PostprocessorManager(QtCore.QObject):
         :rtype: str
         """
         message = m.Message()
+        print "_generate_tables 1"
+        print time.ctime()
 
         for processor, results_list in self.output.iteritems():
-
+            print "_generate_tables 2 %s" % processor
+            print time.ctime()
             self.current_output_postprocessor = processor
             # results_list is for example:
             # [
@@ -119,6 +123,8 @@ class PostprocessorManager(QtCore.QObject):
                 results_list,
                 key=self._sort_no_data,
                 reverse=True)
+            print "_generate_tables 3 %s" % processor
+            print time.ctime()
 
             #init table
             has_no_data = False
@@ -127,11 +133,17 @@ class PostprocessorManager(QtCore.QObject):
             table.caption = self.tr('Detailed %s report') % (safeTr(
                 get_postprocessor_human_name(processor)).lower())
 
+            print "_generate_tables 4 %s" % processor
+            print time.ctime()
+
             header = m.Row()
             header.add(str(self.attribute_title).capitalize())
             for calculation_name in sorted_results[0][1]:
                 header.add(self.tr(calculation_name))
             table.add(header)
+
+            print "_generate_tables 5 %s" % processor
+            print time.ctime()
 
             for zone_name, calc in sorted_results:
                 row = m.Row(zone_name)
@@ -143,15 +155,20 @@ class PostprocessorManager(QtCore.QObject):
                         value += ' *'
                     row.add(value)
                 table.add(row)
+            print "_generate_tables 6 %s" % processor
+            print time.ctime()
 
             # add table to message
             message.add(table)
+            print "_generate_tables 7 %s" % processor
+            print time.ctime()
             if has_no_data:
                 message.add(m.EmphasizedText(self.tr(
                     '* "%s" values mean that there where some problems while '
                     'calculating them. This did not affect the other '
                     'values.') % (self.aggregator.defaults['NO_DATA'])))
-
+            print "_generate_tables 8 %s" % processor
+            print time.ctime()
         return message
 
     def _consolidate_multipart_stats(self):
@@ -341,7 +358,11 @@ class PostprocessorManager(QtCore.QObject):
 
         :returns: str - a string containing the html in the requested format.
         """
+        print "get_output 1"
+        print time.ctime()
         if self.error_message is not None:
+            print "get_output 1"
+            print time.ctime()
             message = m.Message(
                 m.Heading(self.tr('Postprocessing report skipped')),
                 m.Paragraph(self.tr(
@@ -350,11 +371,14 @@ class PostprocessorManager(QtCore.QObject):
                     ' %s') % self.error_message))
             return message
         else:
+            print "get_output 2"
+            print time.ctime()
             try:
                 if (self.keyword_io.read_keywords(
                         self.aggregator.layer, 'had multipart polygon')):
                     self._consolidate_multipart_stats()
             except KeywordNotFoundError:
                 pass
-
+            print "get_output 3"
+            print time.ctime()
             return self._generate_tables()

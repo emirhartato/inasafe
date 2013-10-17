@@ -12,6 +12,8 @@ Contact : ole.moller.nielsen@gmail.com
 .. todo:: Check raster is single band
 
 """
+import time
+
 __author__ = 'tim@linfiniti.com'
 __revision__ = '$Format:%H$'
 __date__ = '10/01/2011'
@@ -1157,15 +1159,25 @@ class Dock(QtGui.QDockWidget, Ui_DockBase):
             # Load impact layer into QGIS
             qgis_impact_layer = read_impact_layer(engine_impact_layer)
             self.layer_changed(qgis_impact_layer)
+            print "calling show_results"
+            print time.ctime()
             report = self.show_results(
                 qgis_impact_layer, engine_impact_layer)
+            print "show_results returned"
+            print time.ctime()
+
         except Exception, e:  # pylint: disable=W0703
 
             # FIXME (Ole): This branch is not covered by the tests
             self.analysis_error(e, self.tr('Error loading impact layer.'))
         else:
             # On success, display generated report
+            print "calling show_static_message"
+            print time.ctime()
             self.show_static_message(m.Message(report))
+
+        print "calling save_state"
+        print time.ctime()
         self.save_state()
         self.hide_busy()
         self.analysisDone.emit(True)
@@ -1182,14 +1194,22 @@ class Dock(QtGui.QDockWidget, Ui_DockBase):
         :returns: Provides a report for writing to the dock.
         :rtype: str
         """
+        print "show_results 1"
+        print time.ctime()
         keywords = self.keyword_io.read_keywords(qgis_impact_layer)
-
+        print "show_results 2"
+        print time.ctime()
         # write postprocessing report to keyword
         output = self.postprocessor_manager.get_output()
+        print "show_results 3"
+        print time.ctime()
         keywords['postprocessing_report'] = output.to_html(
             suppress_newlines=True)
+        print "show_results 4"
+        print time.ctime()
         self.keyword_io.write_keywords(qgis_impact_layer, keywords)
-
+        print "show_results 5"
+        print time.ctime()
         # Get tabular information from impact layer
         report = m.Message()
         report.add(LOGO_ELEMENT)
@@ -1197,6 +1217,8 @@ class Dock(QtGui.QDockWidget, Ui_DockBase):
             'Analysis Results'), **INFO_STYLE))
         report.add(self.keyword_io.read_keywords(
             qgis_impact_layer, 'impact_summary'))
+        print "show_results 6"
+        print time.ctime()
 
         # Get requested style for impact layer of either kind
         style = engine_impact_layer.get_style_info()
@@ -1231,7 +1253,8 @@ class Dock(QtGui.QDockWidget, Ui_DockBase):
                     qgis_impact_layer.source())
             # noinspection PyExceptionInherit
             raise ReadLayerError(message)
-
+        print "show_results 7"
+        print time.ctime()
         # Add layers to QGIS
         layers_to_add = []
         if self.show_intermediate_layers:
@@ -1246,12 +1269,17 @@ class Dock(QtGui.QDockWidget, Ui_DockBase):
             legend = self.iface.legendInterface()
             legend.setLayerVisible(exposure_layer, False)
         self.restore_state()
-
+        print "show_results 8"
+        print time.ctime()
         # append postprocessing report
         report.add(output.to_html())
+        print "show_results 9"
+        print time.ctime()
         # Layer attribution comes last
         report.add(impact_attribution(keywords).to_html(True))
         # Return text to display in report panel
+        print "show_results 10"
+        print time.ctime()
         return report
 
     @staticmethod
@@ -1351,11 +1379,16 @@ class Dock(QtGui.QDockWidget, Ui_DockBase):
         """Carry out any postprocessing required for this impact layer.
         """
         LOGGER.debug('Do postprocessing')
+        print "start postprocessing"
+        print time.ctime()
         self.postprocessor_manager = PostprocessorManager(self.aggregator)
         self.postprocessor_manager.functionParams = self.function_parameters
         self.postprocessor_manager.run()
+        print "done postprocessing"
+        print time.ctime()
         self.completed()
-        self.analysisDone.emit(True)
+        print "done completed"
+        print time.ctime()
 
     @staticmethod
     def enable_busy_cursor():
