@@ -179,7 +179,8 @@ class PostprocessorManager(QtCore.QObject):
         # copy needed because of
         # self.output[postprocessor].pop(corrected_index)
         output = self.output
-
+        print "_consolidate_multipart_stats 1"
+        print time.ctime()
         # iterate postprocessors
         for postprocessor, results_list in output.iteritems():
             #see self._generateTables to see details about results_list
@@ -187,11 +188,19 @@ class PostprocessorManager(QtCore.QObject):
             parts_to_delete = []
             polygon_index = 0
             # iterate polygons
+            print "_consolidate_multipart_stats 2 %s" % postprocessor
+            print time.ctime()
             for polygon_name, results in results_list:
+                print "_consolidate_multipart_stats 3 %s" % polygon_name
+                print time.ctime()
                 if polygon_name in checked_polygon_names.keys():
-                    LOGGER.debug('%s postprocessor found multipart polygon '
-                                 'with name %s' % (postprocessor, polygon_name))
+                    print ('%s postprocessor found multipart polygon with '
+                           'name %s' % (postprocessor, polygon_name))
+                    print "_consolidate_multipart_stats 4 %s" % polygon_name
+                    print time.ctime()
                     for result_name, result in results.iteritems():
+                        print "_consolidate_multipart_stats 5 %s" % result_name
+                        print time.ctime()
                         first_part_index = checked_polygon_names[polygon_name]
                         first_part = self.output[postprocessor][
                             first_part_index]
@@ -201,6 +210,9 @@ class PostprocessorManager(QtCore.QObject):
                         # FIXME one of the parts was 'No data',
                         # see http://irclogs.geoapt.com/inasafe/
                         # %23inasafe.2013-08-09.log (at 22.29)
+
+                        print "_consolidate_multipart_stats 6"
+                        print time.ctime()
 
                         no_data = self.aggregator.defaults['NO_DATA']
                         # both are No data
@@ -216,10 +228,13 @@ class PostprocessorManager(QtCore.QObject):
                             elif value != no_data and result_value == no_data:
                                 result['value'] = 0
                             #if we got here, none is No data
+                            print "_consolidate_multipart_stats 6a"
+                            print time.ctime()
                             new_result = (
                                 unhumanize_number(value) +
                                 unhumanize_number(result_value))
-
+                        print "_consolidate_multipart_stats 7"
+                        print time.ctime()
                         first_part_result['value'] = format_int(new_result)
 
                     parts_to_delete.append(polygon_index)
