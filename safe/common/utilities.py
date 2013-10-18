@@ -531,6 +531,7 @@ def unhumanize_number(number):
         number = number.replace(get_thousand_separator(), '')
         number = int(float(number))
     except (AttributeError, ValueError):
+        print "error unhumanizing %s of type: %s" % (number, type(number))
         pass
 
     return number
