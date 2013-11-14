@@ -80,9 +80,8 @@ def default_minimum_needs():
     return minimum_needs
 
 
-def evacuated_population_weekly_needs(population,
-                                      minimum_needs=False,
-                                      human_names=False):
+def evacuated_population_weekly_needs(
+        population, minimum_needs=False, human_names=False, detailed=False):
     """Calculate estimated needs using BNPB Perka 7/2008 minimum bantuan.
 
 
@@ -92,6 +91,9 @@ def evacuated_population_weekly_needs(population,
     :param minimum_needs: Ratios to use when calculating minimum needs.
         Defaults to perka 7 as described in assumptions below.
     :type minimum_needs: dict
+
+    :param detailed: Flag to get detailed needs.
+    :type detailed: bool
 
     :returns: The weekly needs for the evacuated population.
     :rtype: dict
@@ -103,11 +105,11 @@ def evacuated_population_weekly_needs(population,
     * assume 5 people per family (not in perka - 0.2 people per family)
     * 20 people per toilet (0.05 per person)
     """
-    rice = tr('Rice')
-    drinking_water = tr('Drinking Water')
-    water = tr('Water')
-    family_kits = tr('Family Kits')
-    toilets = tr('Toilets')
+    rice = 'Rice'
+    drinking_water = 'Drinking Water'
+    water = 'Water'
+    family_kits = 'Family Kits'
+    toilets = 'Toilets'
     if not minimum_needs:
         minimum_needs = default_minimum_needs()
 
@@ -125,11 +127,57 @@ def evacuated_population_weekly_needs(population,
 
     if human_names:
         weekly_needs = {
-            rice: val_rice,
-            drinking_water: val_drinking_water,
-            water: val_water,
-            family_kits: val_family_kits,
-            toilets: val_toilets}
+            tr(rice): val_rice,
+            tr(drinking_water): val_drinking_water,
+            tr(water): val_water,
+            tr(family_kits): val_family_kits,
+            tr(toilets): val_toilets}
+    elif detailed:
+        weekly_needs = {
+            'food': {
+                'type': rice,
+                'quantity': val_rice,
+                'units': 'kilogram',
+                'plural': 'kilograms',
+                'unit_abbreviation': 'kg',
+                'per_time_period': 'week',
+                'per_population_unit': 'person'
+            },
+            'drinking_water': {
+                'type': drinking_water,
+                'quantity': val_drinking_water,
+                'units': 'litre',
+                'plural': 'litres',
+                'unit_abbreviation': 'l',
+                'per_time_period': 'week',
+                'per_population_unit': 'person'
+            },
+            'clean_water': {
+                'type': water,
+                'quantity':  val_water,
+                'units': 'litre',
+                'plural': 'litres',
+                'unit_abbreviation': 'l',
+                'per_time_period': 'week',
+                'per_population_unit': 'person'
+            },
+            'hygine_pack': {
+                'type': family_kits,
+                'quantity':  val_family_kits,
+                'units': 'pack',
+                'plural': 'packs',
+                'per_time_period': 'week',
+                'per_population_unit': 'family'
+            },
+            'toilet': {
+                'type': toilets,
+                'quantity': val_toilets,
+                'units': 'toilet',
+                'plural': 'toilets',
+                'per_time_period': 'week',
+                'per_population_unit': 'person'
+            }
+        }
     else:
         weekly_needs = {
             'rice': val_rice,
@@ -444,7 +492,7 @@ def extract_layers(layers, keyword, value):
     return extracted_layers
 
 
-def get_question(hazard_title, exposure_title, func):
+def get_question(hazard_title, exposure_title, function_title):
     """Rephrase the question asked
 
     Input
@@ -453,7 +501,9 @@ def get_question(hazard_title, exposure_title, func):
         func: impact function class
     """
 
-    function_title = get_function_title(func)
+    if not isinstance(function_title, basestring):
+        function_title = get_function_title(function_title)
+
     return (tr('In the event of <i>%(hazard)s</i> how many '
                '<i>%(exposure)s</i> might <i>%(impact)s</i>')
             % {'hazard': hazard_title.lower(),

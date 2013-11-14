@@ -1,12 +1,13 @@
 from third_party.odict import OrderedDict
 
 from safe.impact_functions.core import (
-    FunctionProvider, get_hazard_layer, get_exposure_layer, get_question)
+    FunctionProvider, get_hazard_layer, get_exposure_layer)
 from safe.storage.vector import Vector
 from safe.storage.utilities import DEFAULT_ATTRIBUTE
-from safe.common.utilities import (ugettext as tr, format_int, verify)
-from safe.common.tables import Table, TableRow
+from safe.common.utilities import (ugettext as tr, verify)
 from safe.engine.interpolation import assign_hazard_values_to_exposure_data
+from safe.keywords.keywords_management import ImpactKeywords
+from safe.keywords.table_formatter import TableFormatter
 
 import logging
 LOGGER = logging.getLogger('InaSAFE')
@@ -29,6 +30,7 @@ class FloodBuildingImpactFunction(FunctionProvider):
     # Function documentation
     target_field = 'INUNDATED'
     title = tr('Be flooded')
+    function_id = 'FB1'  # Flood Buildings 1
     synopsis = tr(
         'To assess the impacts of (flood or tsunami) inundation on building '
         'footprints originating from OpenStreetMap (OSM).')
@@ -73,8 +75,18 @@ class FloodBuildingImpactFunction(FunctionProvider):
 
     def run(self, layers):
         """Flood impact to buildings (e.g. from Open Street Map).
+
+        :param layers: The layers to be used in this impact function analysis.
+        :type layers: itterable
+
+        :returns: An impact layer.
+        :rtype: Vector
         """
 
+        impact_keywords = ImpactKeywords()
+        impact_keywords.primary_layer.set_function_details(self)
+        impact_keywords.primary_layer.set_title(
+            tr('Estimated buildings affected'))
         threshold = self.parameters['threshold [m]']  # Flood threshold [m]
 
         verify(isinstance(threshold, float),
@@ -83,8 +95,8 @@ class FloodBuildingImpactFunction(FunctionProvider):
         # Extract data
         H = get_hazard_layer(layers)    # Depth
         E = get_exposure_layer(layers)  # Building locations
-
-        question = get_question(H.get_name(), E.get_name(), self)
+        impact_keywords.set_provenance_layer(H, 'impact_layer')
+        impact_keywords.set_provenance_layer(E, 'exposure_layer')
 
         # Determine attribute name for hazard levels
         if H.is_raster:
@@ -204,7 +216,7 @@ class FloodBuildingImpactFunction(FunctionProvider):
         # Lump small entries and 'unknown' into 'other' category
         for usage in buildings.keys():
             x = buildings[usage]
-            if x < 25 or usage == 'unknown':
+            if usage == 'unknown':
                 if 'other' not in buildings:
                     buildings['other'] = 0
                     affected_buildings['other'] = 0
@@ -214,79 +226,15 @@ class FloodBuildingImpactFunction(FunctionProvider):
                 del buildings[usage]
                 del affected_buildings[usage]
 
-        # Generate simple impact report
-        table_body = [question,
-                      TableRow(
-                          [tr('Building type'), tr('Number flooded'),
-                           tr('Total')], header=True),
-                      TableRow([tr('All'), format_int(count), format_int(N)])]
+        impact_keywords.primary_layer.set_buildings_breakdown(
+            buildings, affected_buildings)
+        impact_keywords.primary_layer.set_impact_assesment_buildings(
+            'buildings', 'flood', buildings, affected_buildings)
 
-        school_closed = 0
-        hospital_closed = 0
-        # Generate break down by building usage type is available
-        list_type_attribute = [
-            'TYPE', 'type', 'amenity', 'building_t', 'office',
-            'tourism', 'leisure', 'building']
-        intersect_type = set(attribute_names) & set(list_type_attribute)
-        if len(intersect_type) > 0:
-            # Make list of building types
-            building_list = []
-            for usage in buildings:
-                building_type = usage.replace('_', ' ')
-
-                # Lookup internationalised value if available
-                building_type = tr(building_type)
-                building_list.append([building_type.capitalize(),
-                                      format_int(affected_buildings[usage]),
-                                      format_int(buildings[usage])])
-                if building_type == 'school':
-                    school_closed = affected_buildings[usage]
-                if building_type == 'hospital':
-                    hospital_closed = affected_buildings[usage]
-
-            # Sort alphabetically
-            building_list.sort()
-
-            table_body.append(TableRow(tr('Breakdown by building type'),
-                                       header=True))
-            for row in building_list:
-                s = TableRow(row)
-                table_body.append(s)
-
-        table_body.append(TableRow(tr('Action Checklist:'), header=True))
-        table_body.append(TableRow(
-            tr('Are the critical facilities still open?')))
-        table_body.append(TableRow(
-            tr('Which structures have warning capacity (eg. sirens, speakers, '
-               'etc.)?')))
-        table_body.append(TableRow(
-            tr('Which buildings will be evacuation centres?')))
-        table_body.append(TableRow(
-            tr('Where will we locate the operations centre?')))
-        table_body.append(TableRow(
-            tr('Where will we locate warehouse and/or distribution centres?')))
-
-        if school_closed > 0:
-            table_body.append(TableRow(
-                tr('Where will the students from the %s closed schools go to '
-                   'study?') % format_int(school_closed)))
-
-        if hospital_closed > 0:
-            table_body.append(TableRow(
-                tr('Where will the patients from the %s closed hospitals go '
-                   'for treatment and how will we transport them?') %
-                format_int(hospital_closed)))
-
-        table_body.append(TableRow(tr('Notes'), header=True))
-        assumption = tr('Buildings are said to be flooded when ')
-        if mode == 'grid':
-            assumption += tr('flood levels exceed %.1f m') % threshold
-        else:
-            assumption += tr('in regions marked as affected')
-        table_body.append(assumption)
-
-        # Result
-        impact_summary = Table(table_body).toNewlineFreeString()
+        # Create the table here. The keywords object will be passed on,
+        # but let us make the loop small for now...
+        tf = TableFormatter(impact_keywords)
+        impact_summary = tf().toNewlineFreeString()
         impact_table = impact_summary
 
         # Create style
@@ -308,6 +256,7 @@ class FloodBuildingImpactFunction(FunctionProvider):
                    projection=I.get_projection(),
                    geometry=I.get_geometry(),
                    name=tr('Estimated buildings affected'),
+                   # This will take the keywords object next
                    keywords={'impact_summary': impact_summary,
                              'impact_table': impact_table,
                              'target_field': self.target_field,

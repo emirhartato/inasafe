@@ -21,6 +21,8 @@ from safe.common.utilities import (
     get_thousand_separator)
 from safe.common.tables import Table, TableRow
 from safe.common.exceptions import ZeroImpactException
+from safe.keywords.keywords_management import ImpactKeywords
+from safe.keywords.table_formatter import TableFormatter
 
 
 class FloodEvacuationFunction(FunctionProvider):
@@ -39,6 +41,7 @@ class FloodEvacuationFunction(FunctionProvider):
     """
 
     title = tr('Need evacuation')
+    function_id = 'FP1'  # Flood Population 1
     defaults = get_defaults()
 
     # Function documentation
@@ -108,13 +111,16 @@ class FloodEvacuationFunction(FunctionProvider):
           Table with number of people evacuated and supplies required
         """
 
+        impact_keywords = ImpactKeywords()
+        impact_keywords.primary_layer.set_function_details(self)
+        impact_keywords.primary_layer.set_title(
+            tr('People in need of evacuation'))
+
         # Identify hazard and exposure layers
         my_hazard = get_hazard_layer(layers)  # Flood inundation [m]
         my_exposure = get_exposure_layer(layers)
-
-        question = get_question(my_hazard.get_name(),
-                                my_exposure.get_name(),
-                                self)
+        impact_keywords.set_provenance_layer(my_hazard, 'impact_layer')
+        impact_keywords.set_provenance_layer(my_exposure, 'exposure_layer')
 
         # Determine depths above which people are regarded affected [m]
         # Use thresholds from inundation layer if specified
@@ -159,66 +165,24 @@ class FloodEvacuationFunction(FunctionProvider):
         # The default value of each logistic is based on BNPB Perka 7/2008
         # minimum bantuan
         minimum_needs = self.parameters['minimum needs']
+        tot_needs = evacuated_population_weekly_needs(
+            evacuated, minimum_needs, detailed=True)
 
-        tot_needs = evacuated_population_weekly_needs(evacuated, minimum_needs)
+        impact_keywords.primary_layer.set_minimum_needs(tot_needs)
+        impact_keywords.primary_layer.set_impact_assesment_population(
+            'flood', evacuated, evacuated, total,
+            dict(zip(thresholds, counts)))
 
-        # Generate impact report for the pdf map
-        # noinspection PyListCreation
-        table_body = [
-            question,
-            TableRow([(tr('People in %.1f m of water') % thresholds[-1]),
-                      '%s%s' % (format_int(evacuated), (
-                          '*' if evacuated >= 1000 else ''))],
-                     header=True),
-            TableRow(tr('* Number is rounded to the nearest 1000'),
-                     header=False),
-            TableRow(tr('Map shows population density needing evacuation')),
-            TableRow(tr('Table below shows the weekly minium needs for all '
-                        'evacuated people')),
-            TableRow([tr('Needs per week'), tr('Total')], header=True),
-            [tr('Rice [kg]'), format_int(tot_needs['rice'])],
-            [tr('Drinking Water [l]'),
-             format_int(tot_needs['drinking_water'])],
-            [tr('Clean Water [l]'), format_int(tot_needs['water'])],
-            [tr('Family Kits'), format_int(tot_needs['family_kits'])],
-            [tr('Toilets'), format_int(tot_needs['toilets'])]]
-
-        table_body.append(TableRow(tr('Action Checklist:'), header=True))
-        table_body.append(TableRow(tr('How will warnings be disseminated?')))
-        table_body.append(TableRow(tr('How will we reach stranded people?')))
-        table_body.append(TableRow(tr('Do we have enough relief items?')))
-        table_body.append(TableRow(tr('If yes, where are they located and how '
-                                      'will we distribute them?')))
-        table_body.append(TableRow(tr(
-            'If no, where can we obtain additional relief items from and how '
-            'will we transport them to here?')))
-
-        # Extend impact report for on-screen display
-        table_body.extend([
-            TableRow(tr('Notes'), header=True),
-            tr('Total population: %s') % format_int(total),
-            tr('People need evacuation if flood levels exceed %(eps).1f m') %
-            {'eps': thresholds[-1]},
-            tr('Minimum needs are defined in BNPB regulation 7/2008'),
-            tr('All values are rounded up to the nearest integer in order to '
-               'avoid representing human lives as fractionals.')])
-
-        if len(counts) > 1:
-            table_body.append(TableRow(tr('Detailed breakdown'), header=True))
-
-            for i, val in enumerate(counts[:-1]):
-                s = (tr('People in %(lo).1f m to %(hi).1f m of water: %(val)i')
-                     % {'lo': thresholds[i],
-                        'hi': thresholds[i + 1],
-                        'val': format_int(val)})
-                table_body.append(TableRow(s, header=False))
-
-        # Result
-        impact_summary = Table(table_body).toNewlineFreeString()
+        # Create the table here. The keywords object will be passed on,
+        # but let us make the loop small for now...
+        tf = TableFormatter(impact_keywords)
+        impact_summary = tf().toNewlineFreeString()
         impact_table = impact_summary
 
         # check for zero impact
         if numpy.nanmax(my_impact) == 0 == numpy.nanmin(my_impact):
+            question = get_question(
+                my_hazard.get_name(), my_exposure.get_name(), self)
             table_body = [
                 question,
                 TableRow([(tr('People in %.1f m of water') % thresholds[-1]),
@@ -271,6 +235,7 @@ class FloodEvacuationFunction(FunctionProvider):
                    geotransform=my_hazard.get_geotransform(),
                    name=tr('Population which %s') % (
                        get_function_title(self).lower()),
+                   # This will take the keywords object next
                    keywords={'impact_summary': impact_summary,
                              'impact_table': impact_table,
                              'map_title': map_title,

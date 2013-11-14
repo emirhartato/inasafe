@@ -1,5 +1,17 @@
-datatype: osm
-category: exposure
-subcategory: structure
-purpose: dki
-title: buildings_osm_4326
+{
+    'VERSION': 1.0,
+    "publisher": "InaSAFE",
+    "categories": [
+        {
+            "category": "exposure",
+            "title": "buildings_osm_4326"
+            "author": "test_provider",
+            "datatype": "osm",
+            "limitations": "This is test data, please treat as such",
+            "subcategory": "structure",
+            "purpose": "dki"
+        }
+    ]
+}
+
+

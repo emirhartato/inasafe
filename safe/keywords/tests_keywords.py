@@ -1,4 +1,22 @@
-{
+# coding=utf-8
+"""Test keyword functionality
+"""
+
+import unittest
+
+from safe.keywords.keywords_management import Keywords
+#from safe.keywords.keywords_management import KeywordsLayerImpact
+
+
+class Test_Keywords(unittest.TestCase):
+    """Tests for Keywords management.
+    """
+
+    def test_import(self):
+        """Impact functions are filtered correctly
+        """
+
+        keywords = Keywords("""{
     "VERSION": 1.0,
     "publisher": "",
     "attribution": "",
@@ -6,18 +24,20 @@
         "title": "People affected by flood prone areas",
         "layer_type": "impact",
         "function_details": {
-            "impact_function_id": "FP1",
+            "impact_function_id": "",
             "impact_function_name": "FloodEvacuationFunction",
-            "title": "be flooded"
             "author" : "AIFDR",
             "synopsis": "Impact function for flood evacuation",
             "rating" : "4",
             "parameters": "layers",
             "description": "Risk plugin for flood population evacuation",
             "citation": "",
-            "limitation": "The default threshold of 1 meter was selected based on consensus, not hard evidence.",
-            "hazard": "A hazard raster layer where each cell represents flood depth (in meters).",
-            "exposure": "An exposure raster layer where each cell represent population count."
+            "limitation": "The default threshold of 1 meter was selected \
+based on consensus, not hard evidence.",
+            "hazard": "A hazard raster layer where each cell represents \
+flood depth (in meters).",
+            "exposure": "An exposure raster layer where each cell represent \
+population count."
         },
         "impact_assessment": {
             "exposure_subcategory": "population",
@@ -78,17 +98,14 @@
     "provenance": {
         "impact_layer": {
              "path": "impact_layer.shp",
-             "name: "impact name",
              "attribution": ""
         },
         "exposure_layer": {
              "path": "exposure_layer.shp",
-             "name: "exposure name",
              "attribution": ""
         },
         "aggregation_layer": {
              "path": "aggregation_layer.shp",
-             "name": "aggregation name",
              "attribution": ""
         }
     },
@@ -97,3 +114,11 @@
         "analysis_duration": 2133
     }
 }
+""")
+        self.assertEqual(keywords.metrics['analysis_duration'], 2133)
+
+
+if __name__ == '__main__':
+    suite = unittest.makeSuite(Test_Keywords, 'test')
+    runner = unittest.TextTestRunner(verbosity=2)
+    runner.run(suite)
