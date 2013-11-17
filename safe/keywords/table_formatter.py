@@ -10,7 +10,7 @@ __copyright__ = ('Copyright 2012, Australia Indonesia Facility for '
                  'Disaster Reduction')
 
 from safe.impact_functions.core import get_question
-from safe.common.tables import Table, TableRow
+from safe.common.tables import Table, TableRow, TableCell
 from safe.common.utilities import ugettext as tr, format_int
 
 
@@ -35,6 +35,8 @@ class TableFormatter(object):
         """
         if table_type == 'Analysis Result':
             return self.analysis_table()
+        elif table_type == 'Complete Analysis Result':
+            return self.analysis_table_complete()
 
     @staticmethod
     def _get_reduced_totals(buildings_affected, min_group_count=25):
@@ -58,7 +60,8 @@ class TableFormatter(object):
         return buildings_reduced
 
     def analysis_table(self):
-        """Build a table describing the analysis results.
+        """Build a table describing the analysis results. (Match current
+        impact_table table.)
 
         :return: The analysis table
         :rtype: Table
@@ -130,30 +133,132 @@ class TableFormatter(object):
             else:
                 assumption += tr('in regions marked as affected')
             table_body.append(assumption)
-        if function_id == 'FP1' and version == 1:
-            thresholds = primary_layer.function_details['parameters'][
-                'thresholds [m]']
-            evacuated =  primary_layer.impact_assessment[
-                'evacuated_population']
-            table_body.append(TableRow([
-                (tr('People in %.1f m of water') % (thresholds[-1])),
-                '%s%s' % (format_int(evacuated),
-                ('*' if evacuated >= 1000 else ''))], header=True))
+        elif function_id == 'FP1' and version == 1:
+            self.fp1_impact_table(table_body, primary_layer)
+            total_needs = primary_layer.minimum_needs
+            self._add_population_needs_table(table_body, total_needs)
+            self._add_action_checklist(table_body, 'population', 'inundation')
+            self.fp1_impact_notes(table_body, primary_layer)
+        elif function_id == 'FP2' and version == 1:
+            self.fp2_impact_table(table_body, primary_layer)
+            total_needs = primary_layer.minimum_needs
+            self._add_population_needs_table(table_body, total_needs)
+
+        return Table(table_body)
+
+    def analysis_table_complete(self):
+        """Build a table describing the detailed analysis results with action
+         list and extended report. (Match current impact impact_summary table.)
+
+        :return: The analysis table
+        :rtype: Table
+        """
+        keywords = self.keywords
+        primary_layer = keywords.primary_layer
+        function_id = primary_layer.function_details['impact_function_id']
+        version = keywords.version
+        question = get_question(
+            keywords.provenance['impact_layer']['name'],
+            keywords.provenance['exposure_layer']['name'],
+            primary_layer.function_details['title'])
+        table_body = [question]
+        if function_id == 'FP2' and version == 1:
+            self.fp2_impact_table(table_body, primary_layer)
+            total_needs = primary_layer.minimum_needs
+            self._add_population_needs_table(table_body, total_needs)
+            self._add_action_checklist(table_body, 'population', 'inundation')
+            self.fp2_impact_notes(table_body, primary_layer)
+
+        return Table(table_body)
+
+    def fp1_impact_table(self, table_body, primary_layer):
+        thresholds = primary_layer.function_details['parameters'][
+            'thresholds [m]']
+        evacuated = primary_layer.impact_assessment[
+            'evacuated_population']
+        table_body.append(self._format_thousands(
+            (tr('People in %.1f m of water') % (thresholds[-1])),
+            evacuated, True))
+        table_body.append(TableRow(
+            tr('* Number is rounded to the nearest 1000')))
+        table_body.append(TableRow(tr(
+            'Map shows population density needing evacuation')))
+
+    def fp2_impact_table(self, table_body, primary_layer):
+        evacuation_percentage = primary_layer.function_details[
+            'parameters']['evacuation_percentage']
+        evacuated = primary_layer.impact_assessment[
+            'evacuated_population']
+        affected = primary_layer.impact_assessment[
+            'evacuated_population']
+        table_body.append(self._format_thousands(
+            tr('People affected'), affected, True))
+        table_body.append(self._format_thousands(
+            tr('People needing evacuation'), evacuated, True))
+        table_body.append(TableRow([TableCell(
+            tr('* Number is rounded to the nearest 1000'), col_span=2)]))
+        table_body.append(TableRow([tr('Evacuation threshold'), '%s%%' % (
+            format_int(evacuation_percentage))], header=True))
+        table_body.append(TableRow(
+            tr('Map shows population affected in each flood prone area')))
+
+    def fp1_impact_notes(self, table_body, primary_layer):
+        total_population = primary_layer.impact_assessment[
+            'total_population']
+        thresholds = primary_layer.function_details['parameters'][
+            'thresholds [m]']
+        table_body.extend([
+            TableRow(tr('Notes'), header=True),
+            tr('Total population: %s') % format_int(total_population),
+            tr('People need evacuation if flood levels exceed '
+               '%(eps).1f m') % {'eps': thresholds[-1]},
+            tr('Minimum needs are defined in BNPB regulation 7/2008'),
+            tr('All values are rounded up to the nearest integer in order '
+                'to avoid representing human lives as fractionals.')])
+
+        if len(thresholds) > 1:
             table_body.append(TableRow(
-                tr('* Number is rounded to the nearest 1000')))
+                tr('Detailed breakdown'), header=True))
+
+            for i, val in enumerate(thresholds[:-1]):
+                s = (tr(
+                    'People in %(lo).1f m to %(hi).1f m of water: '
+                    '%(val)i') % {
+                        'lo': val,
+                        'hi': thresholds[i + 1],
+                        'val': primary_layer.impact_assessment[val]})
+                table_body.append(TableRow(s))
+
+    def fp2_impact_notes(self, table_body, primary_layer):
+        """Impact notes for impact function with id fp2.
+
+        :param table_body: The table data.
+        :type table_body: list
+
+        :param primary_layer: The keywords primary layers data
+        :type primary_layer: KeywordsLayerImpact
+        """
+        total_population = primary_layer.impact_assessment[
+            'total_population']
+        table_body.extend([
+            TableRow(tr('Notes'), header=True),
+            tr('Total population: %s') % format_int(total_population),
+            tr('People need evacuation if in area identified as "Flood Prone"'),
+            tr('Minimum needs are defined in BNPB regulation 7/2008')])
+
+
+    @staticmethod
+    def _add_population_needs_table(table_body, total_needs):
             table_body.append(TableRow(tr(
-                'Map shows population density needing evacuation')))
-            table_body.append(TableRow(tr(
-                'Table below shows the weekly minium needs for all '
+                'Table below shows the weekly minimum needs for all '
                 'evacuated people')))
             table_body.append(TableRow(
                 [tr('Needs per week'), tr('Total')], header=True))
-            tot_needs = primary_layer.minimum_needs
-            food = tot_needs['food']
-            drinking_water = tot_needs['drinking_water']
-            clean_water = tot_needs['clean_water']
-            hygine_pack = tot_needs['hygine_pack']
-            toilet = tot_needs['toilet']
+            food = total_needs['food']
+            drinking_water = total_needs['drinking_water']
+            clean_water = total_needs['clean_water']
+            hygine_pack = total_needs['hygine_pack']
+            toilet = total_needs['toilet']
             for resource in [
                     food, drinking_water, clean_water]:
                 table_body.append(
@@ -165,6 +270,9 @@ class TableFormatter(object):
                     tr('%s' % resource['type']),
                     format_int(resource['quantity'])])
 
+    @staticmethod
+    def _add_action_checklist(table_body, impact, hazard):
+        if hazard == 'population' and impact == 'inundation':
             table_body.append(TableRow(tr('Action Checklist:'), header=True))
             table_body.append(TableRow(
                 tr('How will warnings be disseminated?')))
@@ -178,29 +286,9 @@ class TableFormatter(object):
                 'If no, where can we obtain additional relief items from and '
                 'how will we transport them to here?')))
 
-            # Extend impact report for on-screen display
-            total_population = primary_layer.impact_assessment[
-                'total_population']
-            table_body.extend([
-                TableRow(tr('Notes'), header=True),
-                tr('Total population: %s') % format_int(total_population),
-                tr('People need evacuation if flood levels exceed '
-                   '%(eps).1f m') % {'eps': thresholds[-1]},
-                tr('Minimum needs are defined in BNPB regulation 7/2008'),
-                tr('All values are rounded up to the nearest integer in order '
-                    'to avoid representing human lives as fractionals.')])
 
-            if len(thresholds) > 1:
-                table_body.append(TableRow(
-                    tr('Detailed breakdown'), header=True))
-
-                for i, val in enumerate(thresholds[:-1]):
-                    s = (tr(
-                        'People in %(lo).1f m to %(hi).1f m of water: '
-                        '%(val)i') % {
-                            'lo': val,
-                            'hi': thresholds[i + 1],
-                            'val': primary_layer.impact_assessment[val]})
-                    table_body.append(TableRow(s))
-
-        return Table(table_body)
+    @staticmethod
+    def _format_thousands(name, value, header=False):
+        return TableRow([tr(name), '%s%s' % (
+            format_int(int(value)),
+            ('*' if value >= 1000 else ''))], header=header)

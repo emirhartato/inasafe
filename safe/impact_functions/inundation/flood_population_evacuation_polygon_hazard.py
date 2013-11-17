@@ -23,20 +23,19 @@ from safe.impact_functions.core import (
     FunctionProvider,
     get_hazard_layer,
     get_exposure_layer,
-    get_question,
     default_minimum_needs,
     evacuated_population_weekly_needs)
 from safe.storage.vector import Vector
 from safe.common.utilities import (
     ugettext as tr,
-    format_int,
     round_thousand,
     get_defaults,
     humanize_class,
     create_classes,
     create_label)
-from safe.common.tables import Table, TableRow, TableCell
 from safe.engine.interpolation import assign_hazard_values_to_exposure_data
+from safe.keywords.keywords_management import ImpactKeywords
+from safe.keywords.table_formatter import TableFormatter
 
 
 import logging
@@ -59,6 +58,7 @@ class FloodEvacuationFunctionVectorHazard(FunctionProvider):
     """
 
     title = tr('Need evacuation')
+    function_id = 'FP2'  # Flood Population 2
     # Function documentation
     synopsis = tr(
         'To assess the impacts of (flood or tsunami) inundation in vector '
@@ -123,12 +123,15 @@ class FloodEvacuationFunctionVectorHazard(FunctionProvider):
           Table with number of people evacuated and supplies required
         """
         # Identify hazard and exposure layers
+        impact_keywords = ImpactKeywords()
+        impact_keywords.primary_layer.set_function_details(self)
+        impact_keywords.primary_layer.set_title(
+            tr('People in need of evacuation'))
+
         my_hazard = get_hazard_layer(layers)  # Flood inundation
         my_exposure = get_exposure_layer(layers)
-
-        question = get_question(my_hazard.get_name(),
-                                my_exposure.get_name(),
-                                self)
+        impact_keywords.set_provenance_layer(my_hazard, 'impact_layer')
+        impact_keywords.set_provenance_layer(my_exposure, 'exposure_layer')
 
         # Check that hazard is polygon type
         if not my_hazard.is_vector:
@@ -228,61 +231,18 @@ class FloodEvacuationFunctionVectorHazard(FunctionProvider):
 
         # Calculate estimated minimum needs
         minimum_needs = self.parameters['minimum needs']
-        tot_needs = evacuated_population_weekly_needs(evacuated, minimum_needs)
+        tot_needs = evacuated_population_weekly_needs(
+            evacuated, minimum_needs, detailed=True)
 
-        # Generate impact report for the pdf map
-        table_body = [question,
-                      TableRow([tr('People affected'),
-                                '%s%s' % (format_int(int(affected_population)),
-                                          ('*' if affected_population >= 1000
-                                           else ''))],
-                               header=True),
-                      TableRow([tr('People needing evacuation'),
-                                '%s%s' % (format_int(int(evacuated)),
-                                          ('*' if evacuated >= 1000 else ''))],
-                               header=True),
-                      TableRow([
-                          TableCell(
-                              tr('* Number is rounded to the nearest 1000'),
-                              col_span=2)],
-                          header=False),
-                      TableRow([tr('Evacuation threshold'),
-                                '%s%%' % format_int(
-                                    self.parameters['evacuation_percentage'])],
-                               header=True),
-                      TableRow(tr('Map shows population affected in each flood'
-                                  ' prone area')),
-                      TableRow(tr('Table below shows the weekly minium needs '
-                                  'for all evacuated people')),
-                      TableRow([tr('Needs per week'), tr('Total')],
-                               header=True),
-                      [tr('Rice [kg]'), format_int(tot_needs['rice'])],
-                      [tr('Drinking Water [l]'),
-                       format_int(tot_needs['drinking_water'])],
-                      [tr('Clean Water [l]'), format_int(tot_needs['water'])],
-                      [tr('Family Kits'), format_int(tot_needs[
-                          'family_kits'])],
-                      [tr('Toilets'), format_int(tot_needs['toilets'])]]
-        impact_table = Table(table_body).toNewlineFreeString()
+        impact_keywords.primary_layer.set_minimum_needs(tot_needs)
+        impact_keywords.primary_layer.set_impact_assesment_population(
+            'flood', affected_population, evacuated, total)
 
-        table_body.append(TableRow(tr('Action Checklist:'), header=True))
-        table_body.append(TableRow(tr('How will warnings be disseminated?')))
-        table_body.append(TableRow(tr('How will we reach stranded people?')))
-        table_body.append(TableRow(tr('Do we have enough relief items?')))
-        table_body.append(TableRow(tr('If yes, where are they located and how '
-                                      'will we distribute them?')))
-        table_body.append(TableRow(tr('If no, where can we obtain additional '
-                                      'relief items from and how will we '
-                                      'transport them to here?')))
-
-        # Extend impact report for on-screen display
-        table_body.extend([TableRow(tr('Notes'), header=True),
-                           tr('Total population: %s') % format_int(total),
-                           tr('People need evacuation if in area identified '
-                              'as "Flood Prone"'),
-                           tr('Minimum needs are defined in BNPB '
-                              'regulation 7/2008')])
-        impact_summary = Table(table_body).toNewlineFreeString()
+        # Create the table here. The keywords object will be passed on,
+        # but let us make the loop small for now...
+        tf = TableFormatter(impact_keywords)
+        impact_table = tf().toNewlineFreeString()
+        impact_summary = tf('Complete Analysis Result').toNewlineFreeString()
 
         # Create style
         # Define classes for legend for flooded population counts

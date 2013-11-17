@@ -86,6 +86,15 @@ class KeywordsLayerImpact(KeywordsLayer):
         return serialized_data
 
     def set_impact_assesment(self, exposure_subcategory, hazard_subcategory):
+        """Set generic impact assessment details, based on exposure type and
+        hazard type.
+
+        :param exposure_subcategory: The exposure subcatagory.
+        :type exposure_subcategory: str
+
+        :param hazard_subcategory: The hazard subcatagory.
+        :type hazard_subcategory: str
+        """
         self.impact_assessment = {
             "exposure_subcategory": exposure_subcategory,
             "hazard_subcategory": hazard_subcategory}
@@ -95,6 +104,17 @@ class KeywordsLayerImpact(KeywordsLayer):
     def set_impact_assesment_buildings(
             self, hazard_subcategory,
             buildings_total, buildings_affected):
+        """Set impact assessment details for building impact.
+
+        :param hazard_subcategory: The type of hazard.
+        :type hazard_subcategory: str
+
+        :param buildings_total: Total number of buildings.
+        :type buildings_total: int
+
+        :param buildings_affected: Number of affected buildings.
+        :type buildings_affected: int
+        """
         self.set_impact_assesment(
             'buildings', hazard_subcategory)
         self.impact_assessment['total_buildings'] = sum(
@@ -106,6 +126,23 @@ class KeywordsLayerImpact(KeywordsLayer):
             self, hazard_subcategory,
             affected_population, evacuated_population, total_population,
             additional=None):
+        """Set impact assessment details for population impact.
+
+        :param hazard_subcategory: The type of hazard.
+        :type hazard_subcategory: str
+
+        :param affected_population: The number of affected population
+        :type affected_population: int
+
+        :param evacuated_population: The number of evacuated population
+        :type evacuated_population: int
+
+        :param total_population: The total population
+        :type total_population: int
+
+        :param additional: A dictionary of additional assessment data.
+        :type additional: dict, None
+        """
         self.set_impact_assesment(
             'population', hazard_subcategory)
         self.impact_assessment['affected_population'] = affected_population
@@ -126,12 +163,11 @@ class KeywordsLayerImpact(KeywordsLayer):
             "title": impact_function.title,
             "parameters": impact_function.parameters,
             "description": impact_function.detailed_description,
-            "limitation": impact_function.limitation,
             "hazard": impact_function.hazard_input,
             "exposure": impact_function.exposure_input}
-        for attr in ["author", "rating", "citation"]:
+        for attr in ["author", "rating", "citation", "limitation"]:
             if hasattr(impact_function, attr):
-                self.impact_function_id[attr] = impact_function.author
+                self.function_details[attr] = getattr(impact_function, attr)
 
     def set_buildings_breakdown(self, buildings, buildings_breakdown):
         self.buildings_breakdown = {}
@@ -145,7 +181,6 @@ class KeywordsLayerImpact(KeywordsLayer):
 
     def set_title(self, title):
         self.title = title
-
 
 
 class KeywordsLayerExposure(KeywordsLayer):
