@@ -86,6 +86,69 @@ class KeywordsWizard(QtGui.QDialog, Ui_KeywordsWizardBase):
              ('tephra [kg2/m2]', self.tr('tephra [kg2/m2]')),
              ('volcano', self.tr('volcano')),
              ('Not Set', self.tr('Not Set'))])
+
+        self.standard_categories = [
+            ('hazard', self.tr('hazard'), self.tr('A <b>hazard</b> layer represents something that will impact the people or infrastructure in area. For example a flood, earth quake, tsunami inundation are all different kinds of hazards.')),
+            ('exposure', self.tr('exposure'), self.tr('An <b>exposure</b> layer represents people, property or infrastructure that may be affected in the event of a flood, earthquake, volcano etc.')),
+            ('aggregation', self.tr('aggregation'), self.tr('An <b>aggregation</b> layer represents regions you can use to summarize the results by. For example, we might summarise the affected people after a flood according to city districts.'))]
+
+        self.standard_subcategories = {
+            0: [
+             ('flood', self.tr('flood'), self.tr('description of subcategory: flood')),
+             ('tsunami', self.tr('tsunami'), self.tr('description of subcategory: tsunami')),
+             ('earthquake', self.tr('earthquake'), self.tr('description of subcategory: earthquake')),
+             ('tephra', self.tr('tephra'), self.tr('description of subcategory: tephra')),
+             ('volcano', self.tr('volcano'), self.tr('description of subcategory: volcano')),
+             ('Not Set', self.tr('Not Set'), self.tr('description of subcategory: empty'))
+            ],
+            1: [
+            ('population', self.tr('population'), self.tr('description of subcategory: pupulation')),
+            ('buildings', self.tr('buildings'), self.tr('description of subcategory: buildings')),
+            ('roads', self.tr('roads'), self.tr('description of subcategory: roads'))
+            ],
+            2: []
+        }
+
+        self.standard_subcategories_descriptions = {
+            0: self.tr('What kind of hazard does this '
+                'layer represent? The choice you make here will determine '
+                'which impact functions this hazard layer can be used with. '
+                'For example, if you have choose <i>flood</i> you will be '
+                'able to use this hazard layer with impact functions such as '
+                '<i>flood impact on population</i>.'),
+            1: self.tr('What kind of exposure does this '
+                'layer represent? The choice you make here will determine '
+                'which impact fundtions this exposure layer can be used with. '
+                'For example, if you have choose <i>population</i> you will be '
+                'able to use this exposure layer with impact functions such as '
+                '<i>flood impact on population</i>.'),
+            2: ""
+        }
+
+        self.standard_units = {
+            0: [
+             ('meters', self.tr('meters'), self.tr('description of subcategory: meters')),
+             ('feet', self.tr('feet'), self.tr('description of subcategory: feet')),
+             ('wet/dry', self.tr('wet/dry'), self.tr('description of subcategory: wet/dry'))
+            ],
+            1: [
+             ('meters', self.tr('meters'), self.tr('description of subcategory: meters')),
+             ('feet', self.tr('feet'), self.tr('description of subcategory: feet')),
+             ('wet/dry', self.tr('wet/dry'), self.tr('description of subcategory: wet/dry'))
+            ],
+            2: [
+             ('MMI', self.tr('MMI'), self.tr('description of subcategory: MMI')),
+             ('Not Set', self.tr('Not Set'), self.tr('description of subcategory: Not Set')),
+            ],
+            3: [
+             ('kg/m2', self.tr('kg/m2'), self.tr('description of subcategory: kg/m<sup2</sup>')),
+             ('Not Set', self.tr('Not Set'), self.tr('description of subcategory: Not Set')),
+            ],
+            4: [],
+            5: []
+        }
+
+
         # Save reference to the QGIS interface and parent
         self.iface = iface
         self.parent = parent
@@ -94,22 +157,11 @@ class KeywordsWizard(QtGui.QDialog, Ui_KeywordsWizardBase):
         self.pbnBack.setEnabled(False)
         self.pbnNext.setEnabled(False)
 
-        self.radHazardLayer.toggled.connect(self.on_category_change)
-        self.radExposureLayer.toggled.connect(self.on_category_change)
-        self.radAggregationLayer.toggled.connect(self.on_category_change)
-        self.radHazardFlood.toggled.connect(self.on_subcategory_change)
-        self.radHazardTsunami.toggled.connect(self.on_subcategory_change)
-        self.radHazardEarthquake.toggled.connect(self.on_subcategory_change)
-        self.radHazardTephra.toggled.connect(self.on_subcategory_change)
-        self.radHazardVolcano.toggled.connect(self.on_subcategory_change)
+        for i in self.standard_categories:
+            self.lstCategories.addItem(i[1])
 
-        self.radUnitM.toggled.connect(self.on_unit_change)
-        self.radUnitF.toggled.connect(self.on_unit_change)
-        self.radUnitWetDry.toggled.connect(self.on_unit_change)
-        self.radUnitMMI.toggled.connect(self.on_unit_change)
-        self.radUnitKgpsm.toggled.connect(self.on_unit_change)
-        self.radUnitNo.toggled.connect(self.on_unit_change)
-        self.radUnitNo2.toggled.connect(self.on_unit_change)
+        #clear the label initially
+        self.lblDescribeCategory.setText('')
 
         self.pbnCancel.released.connect(self.reject)
 
@@ -117,127 +169,125 @@ class KeywordsWizard(QtGui.QDialog, Ui_KeywordsWizardBase):
 
 
 
+    # prevents actions being handled twice
+    @pyqtSignature('')
+    def on_lstCategories_itemSelectionChanged(self):
+        """Automatic slot executed when category change. Set description label
+           and subcategory widgets according to the selected category
+        """
 
-    def on_category_change(self):
-        """Slot called after category change. Set subcategory widgets according to the selected category"""
-        # show/hide radiobuttons for various hazards/exposures
-        self.radHazardFlood.setVisible(self.radHazardLayer.isChecked())
-        self.radHazardTsunami.setVisible(self.radHazardLayer.isChecked())
-        self.radHazardEarthquake.setVisible(self.radHazardLayer.isChecked())
-        self.radHazardTephra.setVisible(self.radHazardLayer.isChecked())
-        self.radHazardVolcano.setVisible(self.radHazardLayer.isChecked())
-        self.radExposurePopulation.setVisible(self.radExposureLayer.isChecked())
-        self.radExposureRoads.setVisible(self.radExposureLayer.isChecked())
-        self.radExposureBuildingFootprints.setVisible(self.radExposureLayer.isChecked())
+        # exit if no selection
+        if not len(self.lstCategories.selectedIndexes()): return
 
-        if self.radHazardLayer.isChecked():
-            self.lblSelectSubcategory.setText(self.tr('What kind of hazard does this '
-                'layer represent? The choice you make here will determine '
-                'which impact functions this hazard layer can be used with. '
-                'For example, if you have choose <i>flood</i> you will be '
-                'able to use this hazard layer with impact functions such as '
-                '<i>flood impact on population</i>.'))
-        else:
-            self.lblSelectSubcategory.setText(self.tr('What kind of exposure does this '
-                'layer represent? The choice you make here will determine '
-                'which impact fundtions this exposure layer can be used with. '
-                'For example, if you have choose <i>population</i> you will be '
-                'able to use this exposure layer with impact functions such as '
-                '<i>flood impact on population</i>.'))
+        # set description label
+        index = self.lstCategories.selectedIndexes()[0].row()
+        self.lblDescribeCategory.setText(self.standard_categories[index][2])
+
+        # set subcategory widgets
+        self.lblSelectSubcategory.setText(self.standard_subcategories_descriptions[index])
+
+        self.lstSubcategories.clear()
+        for i in self.standard_subcategories[index]:
+            self.lstSubcategories.addItem(i[1])
+
+        #clear the label initially
+        self.lblDescribeSubcategory.setText('')
 
         # enable the next button
         self.pbnNext.setEnabled(True)
 
 
-    def on_subcategory_change(self):
-        """Slot called after subcategory change. Set unit widgets according to the selected subcategory"""
-        # show/hide radiobuttons for various hazards/exposures
-        self.radUnitM.setVisible(self.radHazardFlood.isChecked() or self.radHazardTsunami.isChecked())
-        self.radUnitF.setVisible(self.radHazardFlood.isChecked() or self.radHazardTsunami.isChecked())
-        self.radUnitWetDry.setVisible(self.radHazardFlood.isChecked() or self.radHazardTsunami.isChecked())
-        self.radUnitMMI.setVisible(self.radHazardEarthquake.isChecked())
-        self.radUnitNo.setVisible(self.radHazardEarthquake.isChecked())
-        self.radUnitKgpsm.setVisible(self.radHazardTephra.isChecked())
-        self.radUnitNo2.setVisible(self.radHazardTephra.isChecked())
 
-        if self.radHazardFlood.isChecked():
-            self.lblSelectUnit.setText('You have selected <b>Flood</b> '
-                'for this hazard layer type. We need to know what units the '
+    def on_lstSubcategories_itemSelectionChanged(self):
+        """Automatic slot executed when subcategory change. Set description label
+           and unit widgets according to the selected category
+        """
+
+        # exit if no selection
+        if not len(self.lstCategories.selectedIndexes()): return
+        if not len(self.lstSubcategories.selectedIndexes()): return
+
+        category = self.lstCategories.selectedIndexes()[0].row()
+        index = self.lstSubcategories.selectedIndexes()[0].row()
+
+        self.lblDescribeSubcategory.setText(self.standard_subcategories[category][index][2])
+
+        self.lblSelectUnit.setText(self.tr('You have selected <b>%s</b> '
+                'for this <b>%s</b> layer type. We need to know what units the '
                 'data are in. For example in a raster layer, each cell might '
                 'represent depth in meters or depth in feet. If the dataset '
                 'is a vector layer, each polygon might represent an inundated '
                 'area, while ares with no polygon coverage would be assumed '
-                'to be dry.')
-        elif self.radHazardTsunami.isChecked():
-            self.lblSelectUnit.setText('You have selected <b>Tsunami</b> '
-                'for this hazard layer type. We need to know what units the '
-                'data are in. For example in a raster layer, each cell might '
-                'represent depth in meters or depth in feet. If the dataset '
-                'is a vector layer, each polygon might represent an inundated '
-                'area, while ares with no polygon coverage would be assumed '
-                'to be dry.')
-        elif self.radHazardEarthquake.isChecked():
-            self.lblSelectUnit.setText('You have selected <b>Earthquake</b> '
-                'for this hazard layer type. We need your confirmation the '
-                'unit of the data is MMI. Otherwise please select <i>unknown '
-                'unit</i>.')
-        elif self.radHazardTephra.isChecked():
-            self.lblSelectUnit.setText('You have selected <b>Tephra</b> '
-                'for this hazard layer type. We need your confirmation the '
-                'unit of the data is kg/m<sup>2</sup>. Otherwise please '
-                'select <i>unknown unit</i>.')
+                'to be dry.') % (self.standard_subcategories[category][index][1],self.standard_categories[category][1]))
+
+        self.lstUnits.clear()
+        for i in self.standard_units[index]:
+            self.lstUnits.addItem(i[1])
+
+        #clear the label initially
+        self.lblDescribeUnit.setText('')
 
         # enable the next button
         self.pbnNext.setEnabled(True)
 
 
-    def on_unit_change(self):
-        """Slot called after unit change. Set field widgets according to the selected unit"""
-        # show/hide radiobuttons for various hazards/exposures
 
+    def on_lstUnits_itemSelectionChanged(self):
+        """Automatic slot executed when unit change. Set description label
+           and field widgets according to the selected category
+        """
+        # exit if no selection
+        if not len(self.lstCategories.selectedIndexes()): return
+        if not len(self.lstUnits.selectedIndexes()): return
 
-        if self.radHazardFlood.isChecked():
-            hazard = self.tr('Flood')
-        elif self.radHazardTsunami.isChecked():
-            hazard = self.tr('Tsunami')
-        elif self.radHazardEarthquake.isChecked():
-            hazard = self.tr('Earthquake')
-        elif self.radHazardTephra.isChecked():
-            hazard = self.tr('Tephra')
+        category = self.lstCategories.selectedIndexes()[0].row()
+        index = self.lstUnits.selectedIndexes()[0].row()
 
-        if self.radUnitM.isChecked():
-            unit = self.tr('meters')
-        elif self.radUnitF.isChecked():
-            unit = self.tr('feet')
-        elif self.radUnitWetDry.isChecked():
-            unit = self.tr('wet/dry')
-        elif self.radUnitMMI.isChecked():
-            unit = self.tr('MMI')
-        elif self.radUnitKgpsm.isChecked():
-            unit = self.tr('kg/m<sup>2</sup>')
-        elif self.radUnitNo.isChecked():
-            unit = self.tr('no units')
-        elif self.radUnitNo2.isChecked():
-            unit = self.tr('no units')
+        self.lblDescribeUnit.setText(self.standard_units[category][index][2])
+
+        hazard = self.standard_categories[category][1]
+        unit = self.standard_units[category][index][1]
 
         self.lblSelectField.setText(self.tr('You have selected <b>%s</b> '
             'measured in <b>%s</b>, and the selected layer is vector layer. '
             'Please choose the attiribute that contains the selected value.')
             % (hazard, unit))
 
-
-
-        # populate the Field combo
+        # populate the fields list
         layer = self.iface.mapCanvas().currentLayer()
         if layer and layer.type() == layer.VectorLayer:
             for field in layer.dataProvider().fields():
-                self.cmbField.addItem(field.name())
+                self.lstFields.addItem(field.name())
 
         # enable the next button
         self.pbnNext.setEnabled(True)
 
 
 
+    def on_lstFields_itemSelectionChanged(self):
+        """Automatic slot executed when field change.
+           Unlocks the Next button.
+        """
+        # enable the next button
+        self.pbnNext.setEnabled(True)
+
+
+
+    def on_leSource_textChanged(self):
+        """Automatic slot executed when the source change.
+           Unlocks the Next button.
+        """
+        # enable the next button
+        self.pbnNext.setEnabled(bool(self.leSource.text()))
+
+
+
+    def on_leTitle_textChanged(self):
+        """Automatic slot executed when the title change.
+           Unlocks the Next button.
+        """
+        # enable the next button
+        self.pbnNext.setEnabled(bool(self.leTitle.text()))
 
 
 
@@ -254,14 +304,16 @@ class KeywordsWizard(QtGui.QDialog, Ui_KeywordsWizardBase):
         self.pbnFinish.setVisible(step == self.stackedWidget.count())
 
 
+
     # prevents actions being handled twice
     @pyqtSignature('')
     def on_pbnNext_released(self):
         """Automatic slot executed when the pbnNext button is released."""
         new_step = self.stackedWidget.currentIndex()+2
         self.go_to_step(new_step)
-#        # disable the Next button until new data entered
-#        #self.pbnNext.setEnabled(False)
+        #disable the Next button until new data entered
+        self.pbnNext.setEnabled(self.is_ready_to_next_step(new_step))
+
 
 
     # prevents actions being handled twice
@@ -269,6 +321,26 @@ class KeywordsWizard(QtGui.QDialog, Ui_KeywordsWizardBase):
     def on_pbnBack_released(self):
         """Automatic slot executed when the pbnBack button is released."""
         new_step = self.stackedWidget.currentIndex()
+        self.pbnNext.setEnabled(True)
         self.go_to_step(new_step)
 
 
+
+    def is_ready_to_next_step(self, step):
+        """Check if widgets are filled an new step can be enabled
+
+        :param step: The present step number
+        :type step: int
+
+        :returns: True if new step may be enabled
+        :rtype: bool
+        """
+
+        if step == 1 and len(self.lstCategories.selectedIndexes()): return True
+        if step == 2 and (len(self.lstSubcategories.selectedIndexes()) or not self.lstSubcategories.count()): return True
+        if step == 3 and (len(self.lstUnits.selectedIndexes()) or not self.lstUnits.count()): return True
+        if step == 4 and (len(self.lstFields.selectedIndexes()) or not self.lstFields.count()): return True
+        if step == 5 and self.leSource.text(): return True
+        if step == 6 and self.leTitle.text(): return True
+
+        return False

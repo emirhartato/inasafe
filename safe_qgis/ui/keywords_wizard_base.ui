@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>765</width>
-    <height>393</height>
+    <width>743</width>
+    <height>369</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -119,12 +119,12 @@
       </property>
       <layout class="QVBoxLayout" name="verticalLayout_2">
        <item>
-        <widget class="QLabel" name="lblSelectyCategory">
+        <widget class="QLabel" name="lblSelectCategory">
          <property name="styleSheet">
           <string notr="true"/>
          </property>
          <property name="text">
-          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;By following the simple steps in this wizard, you can assign keywords to your layer. First you need to define the type of your layer. InaSAFE uses three kinds of source layers.&lt;/p&gt;&lt;p&gt;A &lt;span style=&quot; font-weight:600;&quot;&gt;hazard layer&lt;/span&gt; represents something that will impact the people or infrastructure in area. For example a flood, earth quake, tsunami inundation are all different kinds of hazards.&lt;/p&gt;&lt;p&gt;An &lt;span style=&quot; font-weight:600;&quot;&gt;exposure layer&lt;/span&gt; represents people, property or infrastructure that may be affected in the event of a flood, earthquake, volcano etc.&lt;/p&gt;&lt;p&gt;An &lt;span style=&quot; font-weight:600;&quot;&gt;aggregation layer&lt;/span&gt; represents regions you can use to summarize the results by. For example, we might summarise the affected people after a flood according to city districts.&lt;/p&gt;&lt;p&gt;What kind of layer is this one?&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;By following the simple steps in this wizard, you can assign keywords to your layer. First you need to define the category of your layer.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
          </property>
          <property name="alignment">
           <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
@@ -162,32 +162,87 @@
            </property>
            <property name="sizeHint" stdset="0">
             <size>
-             <width>40</width>
+             <width>20</width>
+             <height>20</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+         <item row="0" column="1">
+          <widget class="QListWidget" name="lstCategories">
+           <property name="enabled">
+            <bool>true</bool>
+           </property>
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Fixed" vsizetype="Expanding">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>280</width>
+             <height>100</height>
+            </size>
+           </property>
+           <property name="maximumSize">
+            <size>
+             <width>280</width>
+             <height>16777215</height>
+            </size>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="2">
+          <spacer name="horizontalSpacer_14">
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+           <property name="sizeType">
+            <enum>QSizePolicy::Fixed</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>20</width>
              <height>20</height>
             </size>
            </property>
           </spacer>
          </item>
          <item row="0" column="3">
-          <widget class="QRadioButton" name="radAggregationLayer">
+          <widget class="QLabel" name="lblDescribeCategory">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
            <property name="text">
-            <string>Aggregation layer</string>
+            <string>[placeholder]</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+           </property>
+           <property name="wordWrap">
+            <bool>true</bool>
            </property>
           </widget>
          </item>
-         <item row="0" column="1">
-          <widget class="QRadioButton" name="radHazardLayer">
-           <property name="text">
-            <string>Hazard layer</string>
+         <item row="0" column="4">
+          <spacer name="horizontalSpacer_16">
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
            </property>
-          </widget>
-         </item>
-         <item row="0" column="2">
-          <widget class="QRadioButton" name="radExposureLayer">
-           <property name="text">
-            <string>Exposure layer</string>
+           <property name="sizeType">
+            <enum>QSizePolicy::Fixed</enum>
            </property>
-          </widget>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>20</width>
+             <height>20</height>
+            </size>
+           </property>
+          </spacer>
          </item>
         </layout>
        </item>
@@ -196,10 +251,13 @@
          <property name="orientation">
           <enum>Qt::Vertical</enum>
          </property>
+         <property name="sizeType">
+          <enum>QSizePolicy::Minimum</enum>
+         </property>
          <property name="sizeHint" stdset="0">
           <size>
            <width>20</width>
-           <height>113</height>
+           <height>40</height>
           </size>
          </property>
         </spacer>
@@ -242,28 +300,7 @@
        </item>
        <item>
         <layout class="QGridLayout" name="gridLayout">
-         <item row="0" column="3">
-          <widget class="QRadioButton" name="radHazardEarthquake">
-           <property name="text">
-            <string>Earthquake</string>
-           </property>
-          </widget>
-         </item>
-         <item row="0" column="2">
-          <widget class="QRadioButton" name="radHazardTsunami">
-           <property name="text">
-            <string>Tsunami</string>
-           </property>
-          </widget>
-         </item>
-         <item row="2" column="3">
-          <widget class="QRadioButton" name="radExposureBuildingFootprints">
-           <property name="text">
-            <string>Building footprints</string>
-           </property>
-          </widget>
-         </item>
-         <item row="0" column="0" rowspan="3">
+         <item row="0" column="0">
           <spacer name="horizontalSpacer_2">
            <property name="orientation">
             <enum>Qt::Horizontal</enum>
@@ -273,46 +310,93 @@
            </property>
            <property name="sizeHint" stdset="0">
             <size>
-             <width>40</width>
+             <width>20</width>
              <height>20</height>
             </size>
            </property>
           </spacer>
          </item>
-         <item row="2" column="1">
-          <widget class="QRadioButton" name="radExposurePopulation">
-           <property name="text">
-            <string>Population</string>
-           </property>
-          </widget>
-         </item>
-         <item row="1" column="1">
-          <widget class="QRadioButton" name="radHazardTephra">
-           <property name="text">
-            <string>Tephra</string>
-           </property>
-          </widget>
-         </item>
-         <item row="2" column="2">
-          <widget class="QRadioButton" name="radExposureRoads">
-           <property name="text">
-            <string>Roads</string>
-           </property>
-          </widget>
-         </item>
-         <item row="1" column="2">
-          <widget class="QRadioButton" name="radHazardVolcano">
-           <property name="text">
-            <string>Volcano</string>
-           </property>
-          </widget>
-         </item>
          <item row="0" column="1">
-          <widget class="QRadioButton" name="radHazardFlood">
-           <property name="text">
-            <string>Flood</string>
+          <widget class="QListWidget" name="lstSubcategories">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Fixed" vsizetype="Expanding">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>280</width>
+             <height>0</height>
+            </size>
+           </property>
+           <property name="maximumSize">
+            <size>
+             <width>280</width>
+             <height>16777215</height>
+            </size>
+           </property>
+           <property name="baseSize">
+            <size>
+             <width>0</width>
+             <height>0</height>
+            </size>
            </property>
           </widget>
+         </item>
+         <item row="0" column="2">
+          <spacer name="horizontalSpacer_15">
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+           <property name="sizeType">
+            <enum>QSizePolicy::Fixed</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>20</width>
+             <height>20</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+         <item row="0" column="3">
+          <widget class="QLabel" name="lblDescribeSubcategory">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="text">
+            <string>[placeholder]</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+           </property>
+           <property name="wordWrap">
+            <bool>true</bool>
+           </property>
+           <property name="margin">
+            <number>0</number>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="4">
+          <spacer name="horizontalSpacer_17">
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+           <property name="sizeType">
+            <enum>QSizePolicy::Fixed</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>20</width>
+             <height>20</height>
+            </size>
+           </property>
+          </spacer>
          </item>
         </layout>
        </item>
@@ -321,10 +405,13 @@
          <property name="orientation">
           <enum>Qt::Vertical</enum>
          </property>
+         <property name="sizeType">
+          <enum>QSizePolicy::Minimum</enum>
+         </property>
          <property name="sizeHint" stdset="0">
           <size>
            <width>20</width>
-           <height>195</height>
+           <height>40</height>
           </size>
          </property>
         </spacer>
@@ -364,72 +451,7 @@
        </item>
        <item>
         <layout class="QGridLayout" name="gridLayout_2">
-         <item row="0" column="0" rowspan="3">
-          <spacer name="horizontalSpacer_12">
-           <property name="orientation">
-            <enum>Qt::Horizontal</enum>
-           </property>
-           <property name="sizeType">
-            <enum>QSizePolicy::Fixed</enum>
-           </property>
-           <property name="sizeHint" stdset="0">
-            <size>
-             <width>40</width>
-             <height>20</height>
-            </size>
-           </property>
-          </spacer>
-         </item>
-         <item row="0" column="1">
-          <widget class="QRadioButton" name="radUnitM">
-           <property name="text">
-            <string>meters</string>
-           </property>
-          </widget>
-         </item>
-         <item row="0" column="2">
-          <widget class="QRadioButton" name="radUnitF">
-           <property name="text">
-            <string>feet</string>
-           </property>
-          </widget>
-         </item>
-         <item row="0" column="3">
-          <widget class="QRadioButton" name="radUnitWetDry">
-           <property name="text">
-            <string>wet / dry</string>
-           </property>
-          </widget>
-         </item>
-         <item row="2" column="2">
-          <widget class="QRadioButton" name="radUnitNo2">
-           <property name="text">
-            <string>unknown unit or abstract number</string>
-           </property>
-          </widget>
-         </item>
-         <item row="1" column="2">
-          <widget class="QRadioButton" name="radUnitNo">
-           <property name="text">
-            <string>unknown unit or abstract number</string>
-           </property>
-          </widget>
-         </item>
-         <item row="2" column="1">
-          <widget class="QRadioButton" name="radUnitKgpsm">
-           <property name="text">
-            <string>kg/m2</string>
-           </property>
-          </widget>
-         </item>
-         <item row="1" column="1">
-          <widget class="QRadioButton" name="radUnitMMI">
-           <property name="text">
-            <string>MMI</string>
-           </property>
-          </widget>
-         </item>
-         <item row="0" column="4">
+         <item row="0" column="0">
           <spacer name="horizontalSpacer_4">
            <property name="orientation">
             <enum>Qt::Horizontal</enum>
@@ -439,14 +461,42 @@
            </property>
            <property name="sizeHint" stdset="0">
             <size>
-             <width>40</width>
+             <width>20</width>
              <height>20</height>
             </size>
            </property>
           </spacer>
          </item>
-         <item row="1" column="4">
-          <spacer name="horizontalSpacer_11">
+         <item row="0" column="1">
+          <widget class="QListWidget" name="lstUnits">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Fixed" vsizetype="Expanding">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>280</width>
+             <height>0</height>
+            </size>
+           </property>
+           <property name="maximumSize">
+            <size>
+             <width>280</width>
+             <height>16777215</height>
+            </size>
+           </property>
+           <property name="baseSize">
+            <size>
+             <width>0</width>
+             <height>0</height>
+            </size>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="2">
+          <spacer name="horizontalSpacer_18">
            <property name="orientation">
             <enum>Qt::Horizontal</enum>
            </property>
@@ -455,14 +505,36 @@
            </property>
            <property name="sizeHint" stdset="0">
             <size>
-             <width>40</width>
+             <width>20</width>
              <height>20</height>
             </size>
            </property>
           </spacer>
          </item>
-         <item row="2" column="4">
-          <spacer name="horizontalSpacer_13">
+         <item row="0" column="3">
+          <widget class="QLabel" name="lblDescribeUnit">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="text">
+            <string>[placeholder]</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+           </property>
+           <property name="wordWrap">
+            <bool>true</bool>
+           </property>
+           <property name="margin">
+            <number>0</number>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="4">
+          <spacer name="horizontalSpacer_19">
            <property name="orientation">
             <enum>Qt::Horizontal</enum>
            </property>
@@ -471,7 +543,7 @@
            </property>
            <property name="sizeHint" stdset="0">
             <size>
-             <width>40</width>
+             <width>20</width>
              <height>20</height>
             </size>
            </property>
@@ -484,10 +556,13 @@
          <property name="orientation">
           <enum>Qt::Vertical</enum>
          </property>
+         <property name="sizeType">
+          <enum>QSizePolicy::Minimum</enum>
+         </property>
          <property name="sizeHint" stdset="0">
           <size>
            <width>20</width>
-           <height>95</height>
+           <height>40</height>
           </size>
          </property>
         </spacer>
@@ -527,7 +602,7 @@
        </item>
        <item>
         <layout class="QGridLayout" name="gridLayout_3">
-         <item row="0" column="0">
+         <item row="1" column="0">
           <spacer name="horizontalSpacer_3">
            <property name="orientation">
             <enum>Qt::Horizontal</enum>
@@ -537,33 +612,13 @@
            </property>
            <property name="sizeHint" stdset="0">
             <size>
-             <width>36</width>
+             <width>20</width>
              <height>20</height>
             </size>
            </property>
           </spacer>
          </item>
-         <item row="0" column="1">
-          <widget class="QLabel" name="lblField">
-           <property name="text">
-            <string>Field</string>
-           </property>
-           <property name="buddy">
-            <cstring>cmbField</cstring>
-           </property>
-          </widget>
-         </item>
-         <item row="0" column="2">
-          <widget class="QComboBox" name="cmbField">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-          </widget>
-         </item>
-         <item row="0" column="3">
+         <item row="1" column="3">
           <spacer name="horizontalSpacer_5">
            <property name="orientation">
             <enum>Qt::Horizontal</enum>
@@ -573,11 +628,14 @@
            </property>
            <property name="sizeHint" stdset="0">
             <size>
-             <width>40</width>
+             <width>20</width>
              <height>20</height>
             </size>
            </property>
           </spacer>
+         </item>
+         <item row="1" column="1" colspan="2">
+          <widget class="QListWidget" name="lstFields"/>
          </item>
         </layout>
        </item>
@@ -842,29 +900,13 @@
   </layout>
  </widget>
  <tabstops>
-  <tabstop>radHazardLayer</tabstop>
-  <tabstop>radExposureLayer</tabstop>
-  <tabstop>radAggregationLayer</tabstop>
   <tabstop>pbnCancel</tabstop>
   <tabstop>pbnBack</tabstop>
   <tabstop>pbnNext</tabstop>
   <tabstop>pbnFinish</tabstop>
-  <tabstop>radHazardFlood</tabstop>
-  <tabstop>radHazardTsunami</tabstop>
-  <tabstop>radHazardEarthquake</tabstop>
-  <tabstop>radHazardTephra</tabstop>
-  <tabstop>radHazardVolcano</tabstop>
-  <tabstop>radExposurePopulation</tabstop>
-  <tabstop>radExposureRoads</tabstop>
-  <tabstop>radExposureBuildingFootprints</tabstop>
-  <tabstop>radUnitM</tabstop>
-  <tabstop>radUnitF</tabstop>
-  <tabstop>radUnitWetDry</tabstop>
-  <tabstop>radUnitMMI</tabstop>
-  <tabstop>radUnitNo</tabstop>
-  <tabstop>radUnitKgpsm</tabstop>
-  <tabstop>radUnitNo2</tabstop>
-  <tabstop>cmbField</tabstop>
+  <tabstop>lstCategories</tabstop>
+  <tabstop>lstSubcategories</tabstop>
+  <tabstop>lstUnits</tabstop>
   <tabstop>leSource</tabstop>
   <tabstop>leTitle</tabstop>
  </tabstops>
