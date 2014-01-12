@@ -694,12 +694,12 @@ class TestDock(TestCase):
         DOCK.prepare_aggregator()
         DOCK.aggregator.validate_keywords()
         DOCK.setup_calculator()
-        runner = DOCK.calculator.get_runner()
-        runner.run()  # Run in same thread
-        safe_layer = runner.impact_layer()
+        test_runner = DOCK.calculator.get_runner()
+        test_runner.run()  # Run in same thread
+        safe_layer = test_runner.impact_layer()
         qgis_layer = read_impact_layer(safe_layer)
-        myStyle = safe_layer.get_style_info()
-        setRasterStyle(qgis_layer, myStyle)
+        style = safe_layer.get_style_info()
+        setRasterStyle(qgis_layer, style)
         # simple test for now - we could test explicity for style state
         # later if needed.
         message = (
@@ -1093,7 +1093,7 @@ class TestDock(TestCase):
 
         # use QGIS zonal stats only in the test
         qgis_zonal_flag = bool(QtCore.QSettings().value(
-            'inasafe/use_native_zonal_stats', False))
+            'inasafe/use_native_zonal_stats', False, type=bool))
         QtCore.QSettings().setValue('inasafe/use_native_zonal_stats', True)
         DOCK.accept()
         QtCore.QSettings().setValue('inasafe/use_native_zonal_stats',
@@ -1313,8 +1313,8 @@ Click for Diagnostic Information:
 
         # With no aggregation layer
         layer = DOCK.get_aggregation_layer()
-        id = layer.id()
-        QgsMapLayerRegistry.instance().removeMapLayer(id)
+        layer_id = layer.id()
+        QgsMapLayerRegistry.instance().removeMapLayer(layer_id)
         result, message = setup_scenario(
             DOCK,
             hazard='A flood in Jakarta like in 2007',
