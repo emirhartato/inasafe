@@ -75,6 +75,7 @@ class KeywordsDialog(QtGui.QDialog, Ui_KeywordsDialogBase):
         self.standard_exposure_list = OrderedDict(
             [('population', self.tr('population')),
              ('structure', self.tr('structure')),
+             ('road', self.tr('road')),
              ('Not Set', self.tr('Not Set'))])
         self.standard_hazard_list = OrderedDict(
             [('earthquake [MMI]', self.tr('earthquake [MMI]')),
@@ -118,6 +119,8 @@ class KeywordsDialog(QtGui.QDialog, Ui_KeywordsDialogBase):
         reload_button = self.buttonBox.addButton(
             self.tr('Reload'), QtGui.QDialogButtonBox.ActionRole)
         reload_button.clicked.connect(self.load_state_from_keywords)
+        self.grpAdvanced.setVisible(False)
+        self.resize_dialog()
 
     def set_layer(self, layer):
         """Set the layer associated with the keyword editor.
@@ -595,6 +598,7 @@ class KeywordsDialog(QtGui.QDialog, Ui_KeywordsDialogBase):
             self.leValue.clear()
             self.lePredefinedValue.clear()
             self.leTitle.clear()
+            self.leSource.clear()
 
     def remove_item_by_key(self, removal_key):
         """Remove an item from the kvp list given its key.
@@ -655,6 +659,11 @@ class KeywordsDialog(QtGui.QDialog, Ui_KeywordsDialogBase):
         In case the layer has no keywords or any problem occurs reading them,
         start with a blank slate so that subcategory gets populated nicely &
         we will assume exposure to start with.
+
+        Also if only title is set we use similar logic (title is added by
+        default in dock and other defaults need to be explicitly added
+        when opening this dialog). See #751
+
         """
         keywords = {'category': 'exposure'}
 
@@ -670,11 +679,20 @@ class KeywordsDialog(QtGui.QDialog, Ui_KeywordsDialogBase):
         if 'title' not in keywords:
             self.leTitle.setText(layer_name)
         self.lblLayerName.setText(self.tr('Keywords for %s' % layer_name))
+
+        if 'source' in keywords:
+            self.leSource.setText(keywords['source'])
+        else:
+            self.leSource.setText('')
+
         # if we have a category key, unpack it first
         # so radio button etc get set
         if 'category' in keywords:
             self.set_category(keywords['category'])
             keywords.pop('category')
+        else:
+            # assume exposure to match ui. See issue #751
+            self.add_list_entry('category', 'exposure')
 
         for key in keywords.iterkeys():
             self.add_list_entry(key, str(keywords[key]))
@@ -688,6 +706,7 @@ class KeywordsDialog(QtGui.QDialog, Ui_KeywordsDialogBase):
         units = self.get_value_for_key('unit')
         data_type = self.get_value_for_key('datatype')
         title = self.get_value_for_key('title')
+
         if title is not None:
             self.leTitle.setText(title)
         elif self.layer is not None:
@@ -749,6 +768,21 @@ class KeywordsDialog(QtGui.QDialog, Ui_KeywordsDialogBase):
         """
         self.add_list_entry('title', str(title))
 
+    # prevents actions being handled twice
+    @pyqtSignature('QString')
+    def on_leSource_textEdited(self, source):
+        """Update the keywords list whenever the user changes the source.
+
+        This slot is not called if the source is changed programmatically.
+
+        :param source: New source keyword for the layer.
+        :type source: str
+        """
+        if source is None or source == '':
+            self.remove_item_by_key('source')
+        else:
+            self.add_list_entry('source', str(source))
+
     def get_keywords(self):
         """Obtain the state of the dialog as a keywords dict.
 
@@ -758,6 +792,10 @@ class KeywordsDialog(QtGui.QDialog, Ui_KeywordsDialogBase):
         #make sure title is listed
         if str(self.leTitle.text()) != '':
             self.add_list_entry('title', str(self.leTitle.text()))
+
+        # make sure the source is listed too
+        if str(self.leSource.text()) != '':
+            self.add_list_entry('source', str(self.leSource.text()))
 
         keywords = {}
         for myCounter in range(self.lstKeywords.count()):
